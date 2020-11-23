@@ -280,11 +280,13 @@ int main()
             contagioExterno(&agent, &results);
             tiempoIncSinCurRec(&agent);
             casosFatales(&agent);
+            /*
             if (agent.S == -2)
             {
-                //agent = 0;
+                //agent = NULL;
                 results.cAcum--;
             }
+            */
             agents[i] = agent;
         }
         printf("    Numero de casos acumulados: %d\n", results.cAcum);
