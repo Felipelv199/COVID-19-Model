@@ -29,7 +29,7 @@ class Simulacion
 {
 public:
     int N;
-    int dmax = 15;
+    int dmax = 40;
     int Mmax = 10;
     int lmax = 500;
     int R = 100;
@@ -80,14 +80,12 @@ double distance(int x0, int y0, int x1, int y1)
     return sqrt((x * x) + (y * y));
 }
 
-void contagio(Simulacion *S, Agent *A[], Agent *ai, int i, Results *R)
+void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A[], Agent *ai)
 {
     int beta = 0;
     int sigma = 0;
-    int y = ai->Y;
-    int x = ai->X;
 
-    for (int j = 0; j < S->N; j++)
+    for (int j = 0; j < n; j++)
     {
         if (j != i)
         {
@@ -102,27 +100,29 @@ void contagio(Simulacion *S, Agent *A[], Agent *ai, int i, Results *R)
             }
 
             double d = distance(x, y, aj->X, aj->Y);
-            if (d <= S->R)
+            if (d <= r)
             {
                 sigma += d * beta;
             }
         }
     }
+
     int alfa = 0;
+
     if (sigma >= 1)
     {
         alfa = 1;
     }
 
-    int r = rand() % 2;
+    int random = rand() % 2;
 
-    if (r <= ai->Pcon)
+    if (random <= Pcon)
     {
-        ai->S = r * alfa;
+        ai->S = random * alfa;
     }
 }
 
-void movilidad(Simulacion *S, Agent *ai)
+void movilidad(int x, int y, float Psmo, float Pmov, Simulacion *S, Agent *ai)
 {
 
     int delta = 0;
@@ -141,6 +141,7 @@ void movilidad(Simulacion *S, Agent *ai)
 
     X = ((xd + (((2 * (rand() % 2)) - 1) * S->lmax)) * delta) + (p * (rand() % 2) * (1 - delta));
     Y = ((yd + (((2 * (rand() % 2)) - 1) * S->lmax)) * delta) + (q * (rand() % 2) * (1 - delta));
+
     int gamma = 0;
 
     if (rand() % 2 <= ai->Pmov)
@@ -149,6 +150,7 @@ void movilidad(Simulacion *S, Agent *ai)
     }
 
     int yd1 = Y;
+    int xd1 = X;
 
     if (yd1 > S->PQ)
         yd1 = S->PQ - 1;
@@ -156,8 +158,6 @@ void movilidad(Simulacion *S, Agent *ai)
     {
         yd1 = 0;
     }
-
-    int xd1 = X;
 
     if (xd1 > S->PQ)
         xd1 = S->PQ - 1;
@@ -170,6 +170,11 @@ void movilidad(Simulacion *S, Agent *ai)
     {
         ai->X = xd1;
         ai->Y = yd1;
+    }
+    else
+    {
+        ai->X = xd;
+        ai->Y = yd;
     }
 }
 
@@ -275,14 +280,22 @@ int main()
                 Agent *agent = agents[k];
                 contagio(sim, agents, agent, k, results);
                 movilidad(sim, agent);
+                agents[k] = agent;
             }
         }
+
         for (int i = 0; i < N; i++)
         {
             Agent *agent = agents[i];
             contagioExterno(agent, results);
             tiempoIncSinCurRec(agent);
             casosFatales(agent);
+            if (agent->S == -2)
+            {
+                agent = 0;
+                results->cAcum--;
+            }
+            agents[i] = agent;
         }
         printf("    Numero de casos acumulados: %d\n", results->cAcum);
         printf("    Numero de nuevos casos positivos por dia: %d\n", results->cXDia);
