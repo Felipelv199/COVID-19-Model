@@ -33,6 +33,25 @@ struct Results
 {  
     int cAcum = 0;
     int cXDia = 0;
+    int cAcumAgRecup = 0;
+    int cRecupXDia = 0;
+    int cFatAcum = 0;
+    int cFatXDia = 0;
+
+    int cZero = 0;
+    int c50per = 0;
+    int c100per = 0;
+
+    int recupPrim = 0;
+    int recup50per = 0;
+    int recup100per =0;
+
+    int cFatPrim = 0;
+    int cFat50per = 0;
+    int cFat100per = 0;
+
+    int timeCPu = 0;
+    int timeGPU = 0;
 };
 
 int rangeRandom(int min, int max)
@@ -74,6 +93,11 @@ void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A,
     int beta = 0;
     int sigma = 0;
 
+    if (ai->S != 0)
+    {
+        return;
+    }
+
     for (int j = 0; j < n; j++)
     {
         if (j != i)
@@ -94,6 +118,7 @@ void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A,
                 sigma += d * beta;
             }
         }
+        //printf("beta: %d\n", beta);
     }
 
     int alfa = 0;
@@ -103,11 +128,18 @@ void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A,
         alfa = 1;
     }
 
-    int random = rand() % 2;
+    float random = (rand() % 101) / 100.0 ;
 
     if (random <= Pcon)
     {
+        
         ai->S = random * alfa;
+        //printf("entro, %f %d %d\n", (rand() % 101) / 100.0, alfa, ai->S);
+        if (ai->S == 1)
+        {
+            R->cAcum++;
+            R->cXDia++;
+        }
     }
 }
 
@@ -128,12 +160,12 @@ void movilidad(Simulacion *S, Agent *ai)
     int xd = ai->X;
     int yd = ai->Y;
 
-    X = ((xd + (((2 * (rand() % 2)) - 1) * S->lmax)) * delta) + (p * (rand() % 2) * (1 - delta));
-    Y = ((yd + (((2 * (rand() % 2)) - 1) * S->lmax)) * delta) + (q * (rand() % 2) * (1 - delta));
+    X = ((xd + (((2 * ((rand() % 101) / 100.0)) - 100) * S->lmax)) * delta) + (p * ((rand() % 101) / 100.0) * (1 - delta));
+    Y = ((yd + (((2 * ((rand() % 101) / 100.0)) - 100) * S->lmax)) * delta) + (q * ((rand() % 101) / 100.0) * (1 - delta));
 
     int gamma = 0;
 
-    if (rand() % 2 <= ai->Pmov)
+    if (((rand() % 101) / 100.0) <= ai->Pmov)
     {
         gamma = 1;
     }
@@ -170,6 +202,7 @@ void movilidad(Simulacion *S, Agent *ai)
 void contagioExterno(Agent *ai, Results *R)
 {
     int sd = ai->S;
+
     int epsilon = 1;
 
     if (sd != 0)
@@ -180,17 +213,17 @@ void contagioExterno(Agent *ai, Results *R)
     int sd1 = sd;
     int pext = ai->Pext;
 
-    if (rand() % 2 <= pext)
+ 
+    if ((((rand() % 101) / 100.0) <= pext) * epsilon > 0)
     {
-        if ((rand() % 2 <= pext) * epsilon > 0)
-        {
-            sd1 = 1;
-            R->cAcum++;
-            R->cXDia++;
-        }
+        sd1 = 1;
+        R->cAcum++;
+        R->cXDia++;
     }
+    
 
     ai->S = sd1;
+
 }
 
 void tiempoIncSinCurRec(Agent *ai)
@@ -268,8 +301,10 @@ int main()
             for (int k = 0; k < N; k++)
             {
                 Agent agent = agents[k];
+                //printf("Agente %d, X: %d Y: %d\n", k, agent.X, agent.Y);
                 contagio(sim.N, sim.R,agent.X, agent.Y, k, agent.Pcon, &results, agents, &agent);
                 movilidad(&sim, &agent);
+                //printf("Agente %d, X: %d Y: %d\n", k, agent.X, agent.Y);
                 agents[k] = agent;
             }
         }
