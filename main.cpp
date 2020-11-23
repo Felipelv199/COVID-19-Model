@@ -1,12 +1,12 @@
 #include <iostream>
 #include <time.h>
 #include <math.h>
+#include <stdlib.h>
 
 using namespace std;
 
-class Agent
+struct Agent
 {
-public:
     float Pcon;
     float Pext;
     float Pfat;
@@ -17,33 +17,20 @@ public:
     int S = 0;
     int X = 0;
     int Y = 0;
-
-    Agent(int x, int y)
-    {
-        X = x;
-        Y = y;
-    }
 };
 
-class Simulacion
+struct Simulacion
 {
-public:
     int N;
     int dmax = 40;
     int Mmax = 10;
     int lmax = 500;
     int R = 100;
     int PQ = 50000;
-
-    Simulacion(int n)
-    {
-        N = n;
-    }
 };
 
-class Results
-{
-public:
+struct Results
+{  
     int cAcum = 0;
     int cXDia = 0;
 };
@@ -53,7 +40,7 @@ int rangeRandom(int min, int max)
     return min + rand() % ((max + 1) - min);
 }
 
-void inicializacion(Simulacion *S, Agent *A[])
+void inicializacion(Simulacion *S, Agent *A)
 {
     int y = 0;
     int x = 0;
@@ -62,13 +49,15 @@ void inicializacion(Simulacion *S, Agent *A[])
     {
         y = rand() % S->PQ;
         x = rand() % S->PQ;
-        Agent *newAgent = new Agent(x, y);
-        newAgent->Pcon = rangeRandom(2, 3) / 100.0;
-        newAgent->Pext = rangeRandom(2, 3) / 100.0;
-        newAgent->Pfat = rangeRandom(7, 70) / 1000.0;
-        newAgent->Pmov = rangeRandom(3, 5) / 10.0;
-        newAgent->Psmo = rangeRandom(7, 9) / 10.0;
-        newAgent->Tinc = rangeRandom(5, 6);
+        Agent newAgent;
+        newAgent.X = x;
+        newAgent.Y = y;
+        newAgent.Pcon = rangeRandom(2, 3) / 100.0;
+        newAgent.Pext = rangeRandom(2, 3) / 100.0;
+        newAgent.Pfat = rangeRandom(7, 70) / 1000.0;
+        newAgent.Pmov = rangeRandom(3, 5) / 10.0;
+        newAgent.Psmo = rangeRandom(7, 9) / 10.0;
+        newAgent.Tinc = rangeRandom(5, 6);
         A[i] = newAgent;
     }
 }
@@ -80,7 +69,7 @@ double distance(int x0, int y0, int x1, int y1)
     return sqrt((x * x) + (y * y));
 }
 
-void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A[], Agent *ai)
+void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A, Agent *ai)
 {
     int beta = 0;
     int sigma = 0;
@@ -89,8 +78,8 @@ void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A[
     {
         if (j != i)
         {
-            Agent *aj = A[j];
-            if (aj->S > 0)
+            Agent aj = A[j];
+            if (aj.S > 0)
             {
                 beta = 1;
             }
@@ -99,7 +88,7 @@ void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A[
                 beta = 0;
             }
 
-            double d = distance(x, y, aj->X, aj->Y);
+            double d = distance(x, y, aj.X, aj.Y);
             if (d <= r)
             {
                 sigma += d * beta;
@@ -122,7 +111,7 @@ void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A[
     }
 }
 
-void movilidad(int x, int y, float Psmo, float Pmov, Simulacion *S, Agent *ai)
+void movilidad(Simulacion *S, Agent *ai)
 {
 
     int delta = 0;
@@ -262,13 +251,14 @@ void casosFatales(Agent *ai)
 int main()
 {
     const int N = 1000;
-    Simulacion *sim = new Simulacion(N);
-    Agent *agents[N] = {0};
-    Results *results = new Results();
-    inicializacion(sim, agents);
+    Simulacion sim;
+    sim.N = N;
+    Agent agents[N];
+    Results results;
+    inicializacion(&sim, agents);
 
-    int dM = sim->dmax;
-    int mM = sim->Mmax;
+    int dM = sim.dmax;
+    int mM = sim.Mmax;
 
     for (int i = 0; i < dM; i++)
     {
@@ -277,30 +267,30 @@ int main()
         {
             for (int k = 0; k < N; k++)
             {
-                Agent *agent = agents[k];
-                contagio(sim, agents, agent, k, results);
-                movilidad(sim, agent);
+                Agent agent = agents[k];
+                contagio(sim.N, sim.R,agent.X, agent.Y, k, agent.Pcon, &results, agents, &agent);
+                movilidad(&sim, &agent);
                 agents[k] = agent;
             }
         }
 
         for (int i = 0; i < N; i++)
         {
-            Agent *agent = agents[i];
-            contagioExterno(agent, results);
-            tiempoIncSinCurRec(agent);
-            casosFatales(agent);
-            if (agent->S == -2)
+            Agent agent = agents[i];
+            contagioExterno(&agent, &results);
+            tiempoIncSinCurRec(&agent);
+            casosFatales(&agent);
+            if (agent.S == -2)
             {
-                agent = 0;
-                results->cAcum--;
+                //agent = 0;
+                results.cAcum--;
             }
             agents[i] = agent;
         }
-        printf("    Numero de casos acumulados: %d\n", results->cAcum);
-        printf("    Numero de nuevos casos positivos por dia: %d\n", results->cXDia);
+        printf("    Numero de casos acumulados: %d\n", results.cAcum);
+        printf("    Numero de nuevos casos positivos por dia: %d\n", results.cXDia);
         printf("--------------------------\n");
-        results->cXDia = 0;
+        results.cXDia = 0;
     }
 
     return 0;
