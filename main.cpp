@@ -30,7 +30,7 @@ struct Simulacion
 };
 
 struct Results
-{  
+{
     int cAcum = 0;
     int cXDia = 0;
 };
@@ -268,7 +268,7 @@ int main()
             for (int k = 0; k < N; k++)
             {
                 Agent agent = agents[k];
-                contagio(sim.N, sim.R,agent.X, agent.Y, k, agent.Pcon, &results, agents, &agent);
+                contagio(sim.N, sim.R, agent.X, agent.Y, k, agent.Pcon, &results, agents, &agent);
                 movilidad(&sim, &agent);
                 agents[k] = agent;
             }
