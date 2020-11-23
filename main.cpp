@@ -277,7 +277,6 @@ int main()
                 movilidad(sim, agent);
             }
         }
-        printf("    Casos Nuevos por Dia: %d\n", results->cXDia);
         for (int i = 0; i < N; i++)
         {
             Agent *agent = agents[i];
@@ -285,8 +284,8 @@ int main()
             tiempoIncSinCurRec(agent);
             casosFatales(agent);
         }
-        printf("    Casos Acumulados: %d\n", results->cAcum);
-        printf("    Casos Nuevos por Dia: %d\n", results->cXDia);
+        printf("    Numero de casos acumulados: %d\n", results->cAcum);
+        printf("    Numero de nuevos casos positivos por dia: %d\n", results->cXDia);
         printf("--------------------------\n");
         results->cXDia = 0;
     }
