@@ -254,7 +254,7 @@ void tiempoIncSinCurRec(Agent *ai)
     ai->Tinc = Tincd1;
 }
 
-void casosFatales(Agent *ai)
+void casosFatales(Agent *ai, Results *R)
 {
     int rho = 0;
     int sd = ai->S;
@@ -265,13 +265,15 @@ void casosFatales(Agent *ai)
     }
 
     int sd1 = sd;
-    int r = rand() % 2;
+    float random = (rand() % 101) / 100.0;
 
-    if (r <= ai->Pfat)
+    if (random <= ai->Pfat)
     {
-        if (r * rho > 0)
+        if (random * rho > 0)
         {
             sd1 = -2;
+            R->cFatAcum++;
+            R->cFatXDia++;
         }
     }
 
@@ -311,20 +313,16 @@ int main()
             Agent agent = agents[i];
             contagioExterno(&agent, &results);
             tiempoIncSinCurRec(&agent);
-            casosFatales(&agent);
-            /*
-            if (agent.S == -2)
-            {
-                //agent = NULL;
-                results.cAcum--;
-            }
-            */
+            casosFatales(&agent, &results);
             agents[i] = agent;
         }
         printf("    Numero de casos acumulados: %d\n", results.cAcum);
         printf("    Numero de nuevos casos positivos por dia: %d\n", results.cXDia);
+        printf("    Numero de nuevos casos fatales acumulados: %d\n", results.cFatAcum);
+        printf("    Numero de nuevos casos fatales por dia: %d\n", results.cFatXDia);
         printf("--------------------------\n");
         results.cXDia = 0;
+        results.cFatXDia = 0;
     }
 
     return 0;
