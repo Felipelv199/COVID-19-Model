@@ -15,8 +15,8 @@ struct Agent
 struct Simulacion
 {
     int N;
-    int dmax = 10;
-    int Mmax = 1;
+    int dmax;
+    int Mmax = 10;
     int lmax = 500;
     int R = 100;
     int PQ = 50000;
@@ -45,4 +45,11 @@ struct Results
 
     int timeCPu = 0;
     int timeGPU = 0;
+};
+
+struct ResultsDays
+{
+    int c = 0;
+    int cRecup = 0;
+    int cFat = 0;
 };
