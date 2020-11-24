@@ -1,2 +1,5 @@
 *.exe
 *.docx
+*.exp
+*.lib
+*.o

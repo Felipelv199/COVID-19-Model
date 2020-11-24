@@ -1,11 +1,65 @@
-
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+#include "curand_kernel.h"
+#include "kernel.h"
 #include <iostream>
 #include <time.h>
 #include <math.h>
 #include <stdlib.h>
-#include "kernel.h"
 
-using namespace std;
+__global__ void setup_kernel ( curandState * state, unsigned long seed )
+{
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    curand_init ( seed, idx, 0, &state[idx] );
+} 
+__global__ void generate(int PQ, Agent *A, curandState* globalState, int max, int min) 
+{
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    curandState localState = globalState[idx];
+    Agent newAgent;
+    newAgent.X = (int)(0 + curand_uniform( &localState) * ((PQ) - 0));
+    newAgent.Y = (int)(0 + curand_uniform( &localState) * ((PQ) - 0));
+
+    newAgent.Pcon = (2 + curand_uniform( &localState) * ((3) - 2)) / 100.0;
+    newAgent.Pext = (2 + curand_uniform( &localState) * ((3) - 2)) / 100.0;
+    newAgent.Pfat = (7 + curand_uniform( &localState) * ((70) - 7)) / 1000.0;
+    newAgent.Pmov = (3 + curand_uniform( &localState) * ((5) - 3)) / 10.0;
+    newAgent.Psmo = (7 + curand_uniform( &localState) * ((9) - 7)) / 10.0;
+    newAgent.Tinc = 5 + curand_uniform( &localState) * ((6+1) - 5);
+
+    A[idx] = newAgent;
+
+    globalState[idx] = localState;
+}
+
+void Initialize(Simulacion *S, Agent *A)
+{
+    curandState* devStates;
+
+    Agent * devAgents;
+
+    cudaMalloc((void**)&devStates, S->N*sizeof(curandState));
+    cudaMalloc((void**)&devAgents, S->N*sizeof(Agent));
+
+    dim3 block(1024); 
+    dim3 grid(10); 
+
+    setup_kernel<<<grid,block>>>(devStates, time(NULL));
+    cudaDeviceSynchronize();
+    generate<<<grid, block>>>(S->PQ, devAgents, devStates, 3, 2);
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(A, devAgents, S->N*sizeof(Agent), cudaMemcpyDeviceToHost);
+    
+    for(int i=0;i<S->N;i++)
+    {
+        printf("X:%d Y:%d Pcon:%f Pext:%f Pfat:%f Pmov:%f Psmo:%f Tinc:%d\n", A[i].X, A[i].Y, A[i].Pcon, A[i].Pext, A[i].Pfat, A[i].Pmov, A[i].Psmo, A[i].Tinc);
+    }
+    
+    cudaFree(devAgents);
+    cudaFree(devStates);
+}
+
 
 int rangeRandom(int min, int max)
 {
@@ -312,14 +366,14 @@ void casosFatales(Agent *ai, Results *R, int n, int day)
 
 int main()
 {
-    const int N = 1000;
+    const int N = 10240;
     Simulacion sim;
     sim.N = N;
     Agent agents[N];
     Results results;
     //inicializacion(&sim, agents);
     Initialize(&sim, agents);
-
+    /*
     int dM = sim.dmax;
     int mM = sim.Mmax;
     srand(time(NULL));
@@ -369,4 +423,5 @@ int main()
     printf("    Dia en que se contagio el 100%% de la poblacion: %d\n", results.c100per);
     printf("    Dia en que se contagio el 100%% de la poblacion: %d\n", results.cFatPrim);
     return 0;
+    */
 }
