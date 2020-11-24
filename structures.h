@@ -15,8 +15,8 @@ struct Agent
 struct Simulacion
 {
     int N;
-    int dmax = 100;
-    int Mmax = 10;
+    int dmax = 10;
+    int Mmax = 1;
     int lmax = 500;
     int R = 100;
     int PQ = 50000;

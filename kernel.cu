@@ -7,12 +7,22 @@
 #include <math.h>
 #include <stdlib.h>
 
-__global__ void setup_kernel ( curandState * state, unsigned long seed )
+__host__ void check_CUDA_error(const char* msj) {
+	cudaError_t error;
+	cudaDeviceSynchronize();
+	error = cudaGetLastError();
+	if (error != cudaSuccess) {
+		printf("Error: %d %s (%s) \n", error, cudaGetErrorString(error), msj);
+	}
+}
+// olv
+
+__global__ void setup_kernel ( curandState* state, unsigned long seed )
 {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     curand_init ( seed, idx, 0, &state[idx] );
 } 
-__global__ void generate(int PQ, Agent *A, curandState* globalState, int max, int min) 
+__global__ void InitializeCUDA(int PQ, Agent *A, curandState* globalState) 
 {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     curandState localState = globalState[idx];
@@ -31,7 +41,7 @@ __global__ void generate(int PQ, Agent *A, curandState* globalState, int max, in
 
     globalState[idx] = localState;
 }
-
+/*
 void Initialize(Simulacion *S, Agent *A)
 {
     curandState* devStates;
@@ -59,7 +69,7 @@ void Initialize(Simulacion *S, Agent *A)
     cudaFree(devAgents);
     cudaFree(devStates);
 }
-
+*/
 
 int rangeRandom(int min, int max)
 {
@@ -95,12 +105,91 @@ double distance(int x0, int y0, int x1, int y1)
     return sqrt((x * x) + (y * y));
 }
 
+__global__ void contagioCUDA(int n, int r, Agent *A, Results *R, int day, curandState* globalState)
+{
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+
+    
+    curandState localState = globalState[idx];
+    int x = A[idx].X;
+    int y = A[idx].Y;
+    int beta = 0;
+    int sigma = 0;
+
+    if (A[idx].S != 0)
+    {
+        return;
+    }
+
+    for (int j = 0; j < n; j++)
+    {
+        if (j != idx)
+        {
+            Agent aj = A[j];
+            //printf("a: %d\n",j);
+            if (aj.S != 2)
+            {
+                if (aj.S > 0)
+                {
+                    beta = 1;
+                }
+                else
+                {
+                    beta = 0;
+                }
+
+                double d = sqrt((float)((aj.X - x) * (aj.X - x)) + ((aj.Y - y) * (aj.Y - y))); 
+                
+
+                if (d <= (double)r)
+                {
+                    sigma += d * beta;
+                }
+            }
+        }
+        //printf("beta: %d\n", beta);
+    }
+
+    int alfa = 0;
+
+    if (sigma >= 1)
+    {
+        alfa = 1;
+    }
+
+    float random = curand_uniform( &localState);
+
+    if (random <= A[idx].Pcon)
+    {
+
+        A[idx].S = random * alfa;
+        //printf("entro, %f %d %d\n", (rand() % 101) / 100.0, alfa, ai->S);
+        if (A[idx].S == 1)
+        {
+            R->cAcum++;
+            R->cXDia++;
+            if (R->cAcum == 1)
+            {
+                R->cZero = day;
+            }
+            else if (n / 2 == R->cAcum)
+            {
+                R->c50per = day;
+            }
+            else if (n == R->cAcum)
+            {
+                R->c100per = day;
+            }
+        }
+    }
+}
+
 void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A, Agent *ai, int day)
 {
     int beta = 0;
     int sigma = 0;
 
-    if (ai->S != 0)
+    if (ai->S != 0 )
     {
         return;
     }
@@ -165,6 +254,72 @@ void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A,
     }
 }
 
+__global__ void movilidadCUDA(Simulacion S, Agent *A, curandState* globalState)
+{
+
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    
+    curandState localState = globalState[idx];
+    if (A[idx].S == -2)
+    {
+        return;
+    }
+    
+    int delta = 0;
+
+    if ((curand_uniform( &localState) * (100)) / 100.0 <= A[idx].Psmo)
+    {
+        delta = 1;
+    }
+
+    int X = 0;
+    int Y = 0;
+    int p = S.PQ;
+    int q = S.PQ;
+    int xd = A[idx].X;
+    int yd = A[idx].Y;
+
+    X = ((xd + (((2 * (curand_uniform( &localState))) - 1) * S.lmax)) * delta) + (p * (curand_uniform( &localState)) * (1 - delta));
+    Y = ((yd + (((2 * (curand_uniform( &localState))) - 1) * S.lmax)) * delta) + (q * (curand_uniform( &localState)) * (1 - delta));
+
+    int gamma = 0;
+
+    if (((curand_uniform( &localState) * ((100))) / 100.0) <= A[idx].Pmov)
+    {
+        gamma = 1;
+    }
+
+    int yd1 = Y;
+    int xd1 = X;
+
+    if (yd1 > S.PQ)
+        yd1 = S.PQ - 1;
+    else if (yd1 < 0)
+    {
+        yd1 = 0;
+    }
+
+    if (xd1 > S.PQ)
+        xd1 = S.PQ - 1;
+    else if (xd1 < 0)
+    {
+        xd1 = 0;
+    }
+
+    if (gamma != 0)
+    {
+        A[idx].X = xd1;
+        A[idx].Y = yd1;
+    }
+    else
+    {
+        A[idx].X = xd;
+        A[idx].Y = yd;
+    }
+    
+    
+}
+
 void movilidad(Simulacion *S, Agent *ai)
 {
     if (ai->S == -2)
@@ -222,6 +377,50 @@ void movilidad(Simulacion *S, Agent *ai)
         ai->X = xd;
         ai->Y = yd;
     }
+}
+
+__global__ void contagioExternoCUDA(Agent *A, Results *R, int n, int day, curandState* globalState)
+{
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    curandState localState = globalState[idx];
+
+    int sd = A[idx].S;
+    if (sd == 2 || sd == -2)
+    {
+        return;
+    }
+    int epsilon = 1;
+
+    if (sd != 0)
+    {
+        epsilon = 0;
+    }
+
+    int sd1 = sd;
+    float pext = A[idx].Pext;
+    float random = curand_uniform( &localState);
+    printf("random: %f Pext:%f\n" , random, pext);
+    if ( (random<= pext) * epsilon > 0)
+    {
+        
+        sd1 = 1;
+        R->cAcum++;
+        R->cXDia++;
+        if (R->cAcum == 1)
+        {
+            R->cZero = day;
+        }
+        else if (n / 2 == R->cAcum)
+        {
+            R->c50per = day;
+        }
+        else if (n == R->cAcum)
+        {
+            R->c100per = day;
+        }
+    }
+
+    A[idx].S = sd1;
 }
 
 void contagioExterno(Agent *ai, Results *R, int n, int day)
@@ -366,62 +565,79 @@ void casosFatales(Agent *ai, Results *R, int n, int day)
 
 int main()
 {
-    const int N = 10240;
+    const int N = 32;
     Simulacion sim;
     sim.N = N;
     Agent agents[N];
     Results results;
     //inicializacion(&sim, agents);
-    Initialize(&sim, agents);
+    //Initialize(&sim, agents); ... asi estaba cuando trono haha
+    curandState* devStates;
+
+    Agent * devAgents;
+
+    cudaMalloc((void**)&devStates, sim.N*sizeof(curandState));
+    cudaMalloc((void**)&devAgents, sim.N*sizeof(Agent));
+
+    dim3 block(N); 
+    dim3 grid(1); 
+
+    setup_kernel<<<grid,block>>>(devStates, time(NULL));
+    cudaDeviceSynchronize();
+    check_CUDA_error("Error en cudaError setupKernel");
+    InitializeCUDA<<<grid, block>>>(sim.PQ, devAgents, devStates);
+    cudaDeviceSynchronize();
+    check_CUDA_error("Error en cudaError Initialize");
+
+
     /*
+    for(int i=0;i<sim.N;i++)
+    {
+        printf("X:%d Y:%d Pcon:%f Pext:%f Pfat:%f Pmov:%f Psmo:%f Tinc:%d\n", agents[i].X, agents[i].Y, agents[i].Pcon, agents[i].Pext, agents[i].Pfat, agents[i].Pmov, agents[i].Psmo, agents[i].Tinc);
+    }
+    ahi esta
+    */
+    
+    
     int dM = sim.dmax;
     int mM = sim.Mmax;
     srand(time(NULL));
     for (int i = 1; i <= dM; i++)
     {
+ 
+
 
         printf("Dia %d\n", i);
         for (int j = 0; j < mM; j++)
         {
-            for (int k = 0; k < N; k++)
-            {
-                Agent agent = agents[k];
-                //printf("Agente %d, X: %d Y: %d\n", k, agent.X, agent.Y);
-                contagio(sim.N, sim.R, agent.X, agent.Y, k, agent.Pcon, &results, agents, &agent, i);
-                movilidad(&sim, &agent);
-                //printf("Agente %d, X: %d Y: %d\n", k, agent.X, agent.Y);
-                agents[k] = agent;
-            }
+
+            contagioCUDA<<<grid, block>>>(sim.N, sim.R, devAgents, &results, i, devStates);
+            cudaDeviceSynchronize();
+            check_CUDA_error("Error en cudaError contagio");
+            
+            
+            movilidadCUDA<<<grid, block>>>(sim, devAgents, devStates);
+            cudaDeviceSynchronize();
+            check_CUDA_error("Error en cudaError movilidad");
+
         }
 
-        for (int j = 0; j < N; j++)
-        {
-            Agent agent = agents[j];
-            contagioExterno(&agent, &results, N, i);
-            tiempoIncSinCurRec(&agent, &results, N, i);
-            casosFatales(&agent, &results, N, i);
-            agents[j] = agent;
-        }
-        printf("    Numero de casos acumulados de agentes contagiados: %d\n", results.cAcum);
-        printf("    Numero de nuevos casos positivos por dia: %d\n", results.cXDia);
-        printf("    Numero de casos acumulados de agentes recuperados: %d\n", results.cAcumAgRecup);
-        printf("    Numero de casos recuperados por dia: %d\n", results.cRecupXDia);
-        printf("    Numero de casos fatales acumulados: %d\n", results.cFatAcum);
-        printf("    Numero de casos fatales por dia: %d\n", results.cFatXDia);
-        printf("------------------------------------------------------\n");
+        contagioExternoCUDA<<<grid,block>>>(devAgents, &results, sim.N, i, devStates);
+        cudaDeviceSynchronize();
+        //antes me salia si lo que era, esta pasando un error al copiar again al host creo
+        check_CUDA_error("Error en cudaError externo");
+
         results.cXDia = 0;
         results.cFatXDia = 0;
         results.cRecupXDia = 0;
+        
     }
+    cudaMemcpy(agents, devAgents, sim.N*sizeof(Agent), cudaMemcpyDeviceToHost);
 
-    printf("Resultados Finales\n");
-    printf("    Numero de casos acumulados de agentes contagiados: %d\n", results.cAcum);
-    printf("    Numero de casos acumulados de agentes recuperados: %d\n", results.cAcumAgRecup);
-    printf("    Numero de casos fatales acumulados: %d\n", results.cFatAcum);
-    printf("    Dia en que se contagio el primer agente: %d\n", results.cZero);
-    printf("    Dia en que se contagio el 50%% de la poblacion: %d\n", results.c50per);
-    printf("    Dia en que se contagio el 100%% de la poblacion: %d\n", results.c100per);
-    printf("    Dia en que se contagio el 100%% de la poblacion: %d\n", results.cFatPrim);
+    cudaFree(devAgents);
+    cudaFree(devStates);
+    
     return 0;
-    */
+    
+    
 }
