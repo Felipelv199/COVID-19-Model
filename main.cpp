@@ -45,7 +45,7 @@ double distance(int x0, int y0, int x1, int y1)
     return sqrt((x * x) + (y * y));
 }
 
-void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A, Agent *ai, int day)
+void contagio(int n, int r, int x, int y, int i, float Pcon, Results *R, Agent *A, Agent *ai, int day)
 {
     int beta = 0;
     int sigma = 0;
