@@ -8,7 +8,7 @@
 
 using namespace std;
 
-__global__ void setup_kernel ( curandState * state, unsigned long seed )
+__global__ void setup_kernel (curandState* state, unsigned long seed)
 {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     curand_init ( seed, idx, 0, &state[idx] );
@@ -61,11 +61,6 @@ __host__ void inicializacion(int n, int pq, Agent *host_agents){
 
     cudaMemcpy(host_agents, dev_agents, n*sizeof(Agent), cudaMemcpyDeviceToHost);
     check_CUDA_error("Error en cudaMemcpy dev_agents-->host_agents");
-    
-    for(int i=0; i<n; i++){
-        Agent ai = host_agents[n];
-        printf("X:%d Y:%d Pcon:%f Pext:%f Pfat:%f Pmov:%f Psmo:%f Tinc:%d\n", ai.X, ai.Y, ai.Pcon, ai.Pext, ai.Pfat, ai.Pmov, ai.Psmo, ai.Tinc);
-    } 
 
     cudaFree(dev_agents);
     cudaFree(dev_states);
@@ -82,6 +77,14 @@ int main(){
     agents = (Agent*)malloc(N*sizeof(Agent));
 
     inicializacion(N, sim.PQ, agents);
+
+    for(int i=0; i<DAYS; i++)
+    {
+        for (int j = 0; j < mM; j++)
+        {
+            
+        }
+    } 
 
     free(agents);
     return 0;
