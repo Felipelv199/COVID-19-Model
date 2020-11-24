@@ -80,7 +80,7 @@ __global__ void contagio_GPU(Agent* A, curandState* globalState, int r, int n)
         alfa = 1;
     }
 
-    float random = (curand_uniform(&localState) * 100) / 100.0;
+    float random = curand_uniform(&localState);
     int Pcond = ai.Pcon;
 
     if (random <= Pcond)
@@ -110,20 +110,21 @@ __global__ void movilidad_GPU(Agent* A, curandState* globalState, int pq, int lM
         delta = 1;
     }
 
-    int X = 0;
-    int Y = 0;
     int p = pq;
     int q = pq;
     int xd = ai.X;
     int yd = ai.Y;
 
-    X = ((xd + (((2 + ((curand_uniform(&localState)*100) / 100.0)) - 100) * lMax)) * delta) + (p * ((curand_uniform(&localState)*100) / 100.0) * (1 - delta));
-    Y = ((yd + (((2 + ((curand_uniform(&localState)*100) / 100.0)) - 100) * lMax)) * delta) + (q * ((curand_uniform(&localState)*100) / 100.0) * (1 - delta));
+    int X_2 = p*curand_uniform(&localState)*(1-delta);
+    int X = ((xd + (2*(curand_uniform(&localState)-1)*lMax))*delta) + X_2;
     
+    int Y_2 = q*curand_uniform(&localState)*(1-delta);
+    int Y = ((yd + (2*(curand_uniform(&localState)-1)*lMax))*delta) + X_2;
+
     int gamma = 0;
     float pMovd = ai.Pmov;
 
-    if (((curand_uniform(&localState)*100) / 100.0) <= pMovd)
+    if (curand_uniform(&localState) <= pMovd)
     {
         gamma = 1;
     }
@@ -160,6 +161,36 @@ __global__ void movilidad_GPU(Agent* A, curandState* globalState, int pq, int lM
         ai.Y = yd;
     }
 
+    A[idx] = ai;
+}
+
+__global__ void contagioExterno_GPU(Agent* A, curandState* globalState, int n)
+{
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    curandState localState = globalState[idx];
+    Agent ai = A[idx];
+    int sd = ai.S;
+
+    if (sd == 2 || sd == -2)
+    {
+        return;
+    }
+
+    int epsilon = 1;
+
+    if (sd != 0)
+    {
+        epsilon = 0;
+    }
+
+    int sd1 = sd;
+    float pExtd = ai.Pext;
+
+    if ((curand_uniform(&localState) <= pExtd) * epsilon > 0)
+    {
+        sd1 = 1;
+    }
+    ai.S = sd1;
     A[idx] = ai;
 }
 
@@ -203,9 +234,10 @@ __host__ void inicializacion(int n, int pq, Agent *host_agents){
     cudaFree(dev_states);
 }
 
-__host__ void contagio(Agent *host_agents, Simulacion *host_simulacion, int n){
+__host__ void contagio(Agent *host_agents, Simulacion *host_simulacion){
     Agent* dev_agents;
     curandState* dev_states;
+    int n = host_simulacion->N;
 
     cudaMalloc((void**)&dev_agents, n*sizeof(Agent));
     check_CUDA_error("Error en cudaMalloc dev_agents");
@@ -221,7 +253,7 @@ __host__ void contagio(Agent *host_agents, Simulacion *host_simulacion, int n){
     setup_kernel<<<grid,block>>>(dev_states, time(NULL));
     check_CUDA_error("Error en kernel setup_kernel");
     cudaDeviceSynchronize();
-    contagio_GPU<<<grid, block>>>(dev_agents, dev_states, host_simulacion->R, host_simulacion->N);
+    contagio_GPU<<<grid, block>>>(dev_agents, dev_states, host_simulacion->R, n);
     check_CUDA_error("Error en kernel contagio_GPU");
     cudaDeviceSynchronize();
 
@@ -237,6 +269,7 @@ __host__ void movilidad(Agent *host_agents, Simulacion *host_simulacion)
     Agent* dev_agents;
     curandState* dev_states;
     int n = host_simulacion->N;
+
     cudaMalloc((void**)&dev_agents, n*sizeof(Agent));
     check_CUDA_error("Error en cudaMalloc dev_agents");
     cudaMalloc((void**)&dev_states, n*sizeof(curandState));
@@ -262,6 +295,37 @@ __host__ void movilidad(Agent *host_agents, Simulacion *host_simulacion)
     cudaFree(dev_states);
 }
 
+__host__ void contagioExterno(Agent *host_agents, Simulacion *host_simulacion)
+{
+    Agent* dev_agents;
+    curandState* dev_states;
+    int n = host_simulacion->N;
+
+    cudaMalloc((void**)&dev_agents, n*sizeof(Agent));
+    check_CUDA_error("Error en cudaMalloc dev_agents");
+    cudaMalloc((void**)&dev_states, n*sizeof(curandState));
+    check_CUDA_error("Error en cudaMalloc dev_states");
+
+    cudaMemcpy(dev_agents, host_agents, n*sizeof(Agent), cudaMemcpyHostToDevice);
+    check_CUDA_error("Error en cudaMalloc host_agents-->dev_agents");
+
+    dim3 block(THREADS_N);
+    dim3 grid(BLOCKS_N);
+
+    setup_kernel<<<grid,block>>>(dev_states, time(NULL));
+    check_CUDA_error("Error en kernel setup_kernel");
+    cudaDeviceSynchronize();
+    contagioExterno_GPU<<<grid,block>>>(dev_agents, dev_states, host_simulacion->N);
+    check_CUDA_error("Error en kernel contagioExterno_GPU");
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(host_agents, dev_agents, n*sizeof(Agent), cudaMemcpyDeviceToHost);
+    check_CUDA_error("Error en cudaMalloc dev_agents-->host_agents");
+
+    cudaFree(dev_agents);
+    cudaFree(dev_states);
+}
+
 int main(){
     const int N = 10240;
     const int DAYS = 100;
@@ -275,15 +339,16 @@ int main(){
 
     inicializacion(N, simulacion.PQ, agents);
 
-    for(int i=0; i<DAYS; i++)
+    for(int i=1; i<=DAYS; i++)
     {
         printf("Day %d\n", i);
         printAgent(agents[2000]);
         for (int j = 0; j < mM; j++)
         {   
-            contagio(agents, &simulacion, N);
+            contagio(agents, &simulacion);
             movilidad(agents, &simulacion);
         }
+        contagioExterno(agents, &simulacion);
         printAgent(agents[2000]);
         printf("------------------------\n");
     } 
