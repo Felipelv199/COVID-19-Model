@@ -95,18 +95,6 @@ void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A,
         {
             R->cAcum++;
             R->cXDia++;
-            if (R->cAcum == 1)
-            {
-                R->cZero = day;
-            }
-            else if (n / 2 == R->cAcum)
-            {
-                R->c50per = day;
-            }
-            else if (n == R->cAcum)
-            {
-                R->c100per = day;
-            }
         }
     }
 }
@@ -192,18 +180,6 @@ void contagioExterno(Agent *ai, Results *R, int n, int day)
         sd1 = 1;
         R->cAcum++;
         R->cXDia++;
-        if (R->cAcum == 1)
-        {
-            R->cZero = day;
-        }
-        else if (n / 2 == R->cAcum)
-        {
-            R->c50per = day;
-        }
-        else if (n == R->cAcum)
-        {
-            R->c100per = day;
-        }
     }
 
     ai->S = sd1;
@@ -313,20 +289,20 @@ void casosFatales(Agent *ai, Results *R, int n, int day)
 int main()
 {
     const int N = 1000;
+    const int DAYS = 100;
     Simulacion sim;
     sim.N = N;
+    sim.dmax = DAYS;
     Agent agents[N];
+    ResultsDays resultsDays[DAYS];
     Results results;
-    //inicializacion(&sim, agents);
-    Initialize(&sim, agents);
+    inicializacion(&sim, agents);
 
     int dM = sim.dmax;
     int mM = sim.Mmax;
     srand(time(NULL));
     for (int i = 1; i <= dM; i++)
     {
-
-        printf("Dia %d\n", i);
         for (int j = 0; j < mM; j++)
         {
             for (int k = 0; k < N; k++)
@@ -348,16 +324,72 @@ int main()
             casosFatales(&agent, &results, N, i);
             agents[j] = agent;
         }
-        printf("    Numero de casos acumulados de agentes contagiados: %d\n", results.cAcum);
-        printf("    Numero de nuevos casos positivos por dia: %d\n", results.cXDia);
-        printf("    Numero de casos acumulados de agentes recuperados: %d\n", results.cAcumAgRecup);
-        printf("    Numero de casos recuperados por dia: %d\n", results.cRecupXDia);
-        printf("    Numero de casos fatales acumulados: %d\n", results.cFatAcum);
-        printf("    Numero de casos fatales por dia: %d\n", results.cFatXDia);
-        printf("------------------------------------------------------\n");
+        ResultsDays newDay;
+        newDay.c = results.cXDia;
+        newDay.cFat = results.cFatXDia;
+        newDay.cRecup = results.cRecupXDia;
+        resultsDays[i] = newDay;
+
         results.cXDia = 0;
         results.cFatXDia = 0;
         results.cRecupXDia = 0;
+    }
+
+    int counterC = 0;
+    int counterRecup = 0;
+    int counterFat = 0;
+
+    for (int i = 1; i <= DAYS; i++)
+    {
+        ResultsDays resultsDay = resultsDays[i];
+
+        counterC += resultsDay.c;
+        if (counterC > 0 && counterC < results.cAcum / 2 && results.cZero == 0)
+        {
+            results.cZero = i;
+        }
+        else if (counterC >= results.cAcum / 2 && counterC < results.cAcum && results.c50per == 0)
+        {
+            results.c50per = i;
+        }
+        else if (counterC == results.cAcum && results.c100per == 0)
+        {
+            results.c100per = i;
+        }
+
+        counterRecup += resultsDay.cRecup;
+        if (counterRecup > 0 && counterRecup < results.cAcumAgRecup / 2 && results.recupPrim == 0)
+        {
+            results.recupPrim = i;
+        }
+        else if (counterRecup >= results.cAcumAgRecup / 2 && counterRecup < results.cAcumAgRecup && results.recup50per == 0)
+        {
+            results.recup50per = i;
+        }
+        else if (counterRecup == results.cAcumAgRecup && results.recup100per == 0)
+        {
+            results.recup100per = i;
+        }
+
+        counterFat += resultsDay.cFat;
+        if (counterFat > 0 && counterFat < results.cFatAcum / 2 && results.cFatPrim == 0)
+        {
+            results.cFatPrim = i;
+        }
+        else if (counterFat >= results.cFatAcum / 2 && counterFat < results.cFatAcum && results.cFat50per == 0)
+        {
+            results.cFat50per = i;
+        }
+        else if (counterFat == results.cFatAcum && results.cFat100per == 0)
+        {
+            results.cFat100per = i;
+        }
+
+        printf("Dia %d\n", i);
+        printf("    Numero de nuevos casos positivos por dia: %d\n", resultsDay.c);
+        printf("    Numero de casos recuperados por dia: %d\n", resultsDay.cRecup);
+        printf("    Numero de casos fatales por dia: %d\n", resultsDay.cFat);
+        printf("------------------------------------------------------\n");
     }
 
     printf("Resultados Finales\n");
@@ -365,8 +397,13 @@ int main()
     printf("    Numero de casos acumulados de agentes recuperados: %d\n", results.cAcumAgRecup);
     printf("    Numero de casos fatales acumulados: %d\n", results.cFatAcum);
     printf("    Dia en que se contagio el primer agente: %d\n", results.cZero);
-    printf("    Dia en que se contagio el 50%% de la poblacion: %d\n", results.c50per);
-    printf("    Dia en que se contagio el 100%% de la poblacion: %d\n", results.c100per);
-    printf("    Dia en que se contagio el 100%% de la poblacion: %d\n", results.cFatPrim);
+    printf("    Dia en que se contagio el 50%% de los agentes contagiados: %d\n", results.c50per);
+    printf("    Dia en que se contagio el 100%% de los agentes contagiados: %d\n", results.c100per);
+    printf("    Dia en que se recupero el primer agente: %d\n", results.recupPrim);
+    printf("    Dia en que se recupero el 50%% de los agentes recuperados: %d\n", results.recup50per);
+    printf("    Dia en que se recupero el 100%% de los agentes recuperados: %d\n", results.recup100per);
+    printf("    Dia en que ocurrio el primer caso fatal: %d\n", results.cFatPrim);
+    printf("    Dia en que ocurrio el 50%% de los casos fatales: %d\n", results.cFat50per);
+    printf("    Dia en que ocurrio el 100%% de los casos fatales: %d\n", results.cFat100per);
     return 0;
 }
