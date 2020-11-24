@@ -12,6 +12,11 @@ int rangeRandom(int min, int max)
     return min + rand() % ((max + 1) - min);
 }
 
+void printAgent(Agent ai)
+{
+    printf("X: %d, Y: %d, S: %d, Pcon: %f, Pext: %f, Pfat: %f, Pmov: %f, Psmo: %f, Tinc: %d\n", ai.X, ai.Y, ai.S, ai.Pcon, ai.Pext, ai.Pfat, ai.Pmov, ai.Psmo, ai.Tinc);
+}
+
 void inicializacion(Simulacion *S, Agent *A)
 {
     int y = 0;
@@ -308,14 +313,11 @@ int main()
             for (int k = 0; k < N; k++)
             {
                 Agent agent = agents[k];
-                //printf("Agente %d, X: %d Y: %d\n", k, agent.X, agent.Y);
                 contagio(sim.N, sim.R, agent.X, agent.Y, k, agent.Pcon, &results, agents, &agent, i);
                 movilidad(&sim, &agent);
-                //printf("Agente %d, X: %d Y: %d\n", k, agent.X, agent.Y);
                 agents[k] = agent;
             }
         }
-
         for (int j = 0; j < N; j++)
         {
             Agent agent = agents[j];

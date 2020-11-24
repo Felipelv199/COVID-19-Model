@@ -90,6 +90,79 @@ __global__ void contagio_GPU(Agent* A, curandState* globalState, int r, int n)
     }
 }
 
+__global__ void movilidad_GPU(Agent* A, curandState* globalState, int pq, int lMax)
+{
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    curandState localState = globalState[idx];
+    Agent ai = A[idx];
+    int sd = ai.S;
+
+    if (sd == -2)
+    {
+        return;
+    }
+
+    int pSmod = ai.Psmo;
+    int delta = 0;
+
+    if (curand_uniform(&localState) * 2 <= pSmod)
+    {
+        delta = 1;
+    }
+
+    int X = 0;
+    int Y = 0;
+    int p = pq;
+    int q = pq;
+    int xd = ai.X;
+    int yd = ai.Y;
+
+    X = ((xd + (((2 + ((curand_uniform(&localState)*100) / 100.0)) - 100) * lMax)) * delta) + (p * ((curand_uniform(&localState)*100) / 100.0) * (1 - delta));
+    Y = ((yd + (((2 + ((curand_uniform(&localState)*100) / 100.0)) - 100) * lMax)) * delta) + (q * ((curand_uniform(&localState)*100) / 100.0) * (1 - delta));
+    
+    int gamma = 0;
+    float pMovd = ai.Pmov;
+
+    if (((curand_uniform(&localState)*100) / 100.0) <= pMovd)
+    {
+        gamma = 1;
+    }
+
+    int xd1 = X;
+    int yd1 = Y;
+
+    if (xd1 > pq)
+    {
+        xd1 = pq - 1;
+    }
+    else if (xd1 < 0)
+    {
+        xd1 = 0;
+    }
+
+    if (yd1 > pq)
+    {
+        yd1 = pq - 1;
+    }
+    else if (yd1 < 0)
+    {
+        yd1 = 0;
+    }
+
+    if (gamma != 0)
+    {
+        ai.X = xd1;
+        ai.Y = yd1;
+    }
+    else
+    {
+        ai.X = xd;
+        ai.Y = yd;
+    }
+
+    A[idx] = ai;
+}
+
 __host__ void check_CUDA_error(const char* msj) {
 	cudaError_t error;
 	cudaDeviceSynchronize();
@@ -97,6 +170,11 @@ __host__ void check_CUDA_error(const char* msj) {
 	if (error != cudaSuccess) {
 		printf("Error: %d %s (%s)\n", error, cudaGetErrorString(error), msj);
 	}
+}
+
+__host__ void printAgent(Agent ai)
+{
+    printf("X: %d, Y: %d, S: %d, Pcon: %f, Pext: %f, Pfat: %f, Pmov: %f, Psmo: %f, Tinc: %d\n", ai.X, ai.Y, ai.S, ai.Pcon, ai.Pext, ai.Pfat, ai.Pmov, ai.Psmo, ai.Tinc);
 }
 
 __host__ void inicializacion(int n, int pq, Agent *host_agents){
@@ -154,9 +232,34 @@ __host__ void contagio(Agent *host_agents, Simulacion *host_simulacion, int n){
     cudaFree(dev_states);
 }
 
-__host__ void printAgent(Agent ai)
+__host__ void movilidad(Agent *host_agents, Simulacion *host_simulacion)
 {
-    printf("X: %d, Y: %d, S: %d, Pcon: %f, Pext: %f, Pfat: %f, Pmov: %f, Psmo: %f, Tinc: %d\n", ai.X, ai.Y, ai.S, ai.Pcon, ai.Pext, ai.Pfat, ai.Pmov, ai.Psmo, ai.Tinc);
+    Agent* dev_agents;
+    curandState* dev_states;
+    int n = host_simulacion->N;
+    cudaMalloc((void**)&dev_agents, n*sizeof(Agent));
+    check_CUDA_error("Error en cudaMalloc dev_agents");
+    cudaMalloc((void**)&dev_states, n*sizeof(curandState));
+    check_CUDA_error("Error en cudaMalloc dev_states");
+
+    cudaMemcpy(dev_agents, host_agents, n*sizeof(Agent), cudaMemcpyHostToDevice);
+    check_CUDA_error("Error en cudaMalloc host_agents-->dev_agents");
+
+    dim3 block(THREADS_N);
+    dim3 grid(BLOCKS_N);
+
+    setup_kernel<<<grid,block>>>(dev_states, time(NULL));
+    check_CUDA_error("Error en kernel setup_kernel");
+    cudaDeviceSynchronize();
+    movilidad_GPU<<<grid, block>>>(dev_agents, dev_states, host_simulacion->PQ, host_simulacion->lmax);
+    check_CUDA_error("Error en kernel movilidad_GPU");
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(host_agents, dev_agents, n*sizeof(Agent), cudaMemcpyDeviceToHost);
+    check_CUDA_error("Error en cudaMalloc host_agents-->dev_agents");
+
+    cudaFree(dev_agents);
+    cudaFree(dev_states);
 }
 
 int main(){
@@ -174,10 +277,15 @@ int main(){
 
     for(int i=0; i<DAYS; i++)
     {
+        printf("Day %d\n", i);
+        printAgent(agents[2000]);
         for (int j = 0; j < mM; j++)
         {   
             contagio(agents, &simulacion, N);
+            movilidad(agents, &simulacion);
         }
+        printAgent(agents[2000]);
+        printf("------------------------\n");
     } 
 
     free(agents);
