@@ -22,7 +22,7 @@ struct Agent
 struct Simulacion
 {
     int N;
-    int dmax = 40;
+    int dmax = 100;
     int Mmax = 10;
     int lmax = 500;
     int R = 100;
@@ -88,7 +88,7 @@ double distance(int x0, int y0, int x1, int y1)
     return sqrt((x * x) + (y * y));
 }
 
-void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A, Agent *ai)
+void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A, Agent *ai, int day)
 {
     int beta = 0;
     int sigma = 0;
@@ -103,19 +103,22 @@ void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A,
         if (j != i)
         {
             Agent aj = A[j];
-            if (aj.S > 0)
+            if (aj.S != 2)
             {
-                beta = 1;
-            }
-            else
-            {
-                beta = 0;
-            }
+                if (aj.S > 0)
+                {
+                    beta = 1;
+                }
+                else
+                {
+                    beta = 0;
+                }
 
-            double d = distance(x, y, aj.X, aj.Y);
-            if (d <= r)
-            {
-                sigma += d * beta;
+                double d = distance(x, y, aj.X, aj.Y);
+                if (d <= r)
+                {
+                    sigma += d * beta;
+                }
             }
         }
         //printf("beta: %d\n", beta);
@@ -139,13 +142,28 @@ void contagio(int n, int r, int x, int y, int i, int Pcon, Results *R, Agent *A,
         {
             R->cAcum++;
             R->cXDia++;
+            if (R->cAcum == 1)
+            {
+                R->cZero = day;
+            }
+            else if (n / 2 == R->cAcum)
+            {
+                R->c50per = day;
+            }
+            else if (n == R->cAcum)
+            {
+                R->c100per = day;
+            }
         }
     }
 }
 
 void movilidad(Simulacion *S, Agent *ai)
 {
-
+    if (ai->S == -2)
+    {
+        return;
+    }
     int delta = 0;
 
     if (rand() % 2 <= ai->Psmo)
@@ -199,10 +217,13 @@ void movilidad(Simulacion *S, Agent *ai)
     }
 }
 
-void contagioExterno(Agent *ai, Results *R)
+void contagioExterno(Agent *ai, Results *R, int n, int day)
 {
     int sd = ai->S;
-
+    if (sd == 2 || sd == -2)
+    {
+        return;
+    }
     int epsilon = 1;
 
     if (sd != 0)
@@ -218,20 +239,58 @@ void contagioExterno(Agent *ai, Results *R)
         sd1 = 1;
         R->cAcum++;
         R->cXDia++;
+        if (R->cAcum == 1)
+        {
+            R->cZero = day;
+        }
+        else if (n / 2 == R->cAcum)
+        {
+            R->c50per = day;
+        }
+        else if (n == R->cAcum)
+        {
+            R->c100per = day;
+        }
     }
 
     ai->S = sd1;
 }
 
-void tiempoIncSinCurRec(Agent *ai)
+void tiempoIncSinCurRec(Agent *ai, Results *R, int n, int day)
 {
     int Sd = ai->S;
     int Trecd = ai->Trec;
     int Trecd1 = Trecd;
 
+    if (Sd == 2 || Sd == -2)
+    {
+        return;
+    }
+
     if (Sd < 0)
     {
         Trecd1 -= 1;
+        if (Trecd1 == 0)
+        {
+            ai->S = 2;
+            R->cAcumAgRecup++;
+            R->cRecupXDia++;
+
+            if (R->cAcumAgRecup == 1)
+            {
+                R->recupPrim = day;
+            }
+            else if (n / 2 == R->cAcumAgRecup)
+            {
+                R->recup50per = day;
+            }
+            else if (n == R->cAcumAgRecup)
+            {
+                R->recup100per = day;
+            }
+
+            return;
+        }
     }
 
     int Tincd = ai->Tinc;
@@ -254,10 +313,15 @@ void tiempoIncSinCurRec(Agent *ai)
     ai->Tinc = Tincd1;
 }
 
-void casosFatales(Agent *ai, Results *R)
+void casosFatales(Agent *ai, Results *R, int n, int day)
 {
     int rho = 0;
     int sd = ai->S;
+
+    if (sd == 2 || sd == -2)
+    {
+        return;
+    }
 
     if (sd < 0)
     {
@@ -274,6 +338,19 @@ void casosFatales(Agent *ai, Results *R)
             sd1 = -2;
             R->cFatAcum++;
             R->cFatXDia++;
+
+            if (R->cFatAcum == 1)
+            {
+                R->cFatPrim = day;
+            }
+            else if (n / 2 == R->cFatAcum)
+            {
+                R->cFat50per = day;
+            }
+            else if (n == R->cFatAcum)
+            {
+                R->cFat100per = day;
+            }
         }
     }
 
@@ -291,39 +368,51 @@ int main()
 
     int dM = sim.dmax;
     int mM = sim.Mmax;
-
-    for (int i = 0; i < dM; i++)
+    srand(time(NULL));
+    for (int i = 1; i <= dM; i++)
     {
-        printf("Dia %d\n", i + 1);
+
+        printf("Dia %d\n", i);
         for (int j = 0; j < mM; j++)
         {
             for (int k = 0; k < N; k++)
             {
                 Agent agent = agents[k];
                 //printf("Agente %d, X: %d Y: %d\n", k, agent.X, agent.Y);
-                contagio(sim.N, sim.R, agent.X, agent.Y, k, agent.Pcon, &results, agents, &agent);
+                contagio(sim.N, sim.R, agent.X, agent.Y, k, agent.Pcon, &results, agents, &agent, i);
                 movilidad(&sim, &agent);
                 //printf("Agente %d, X: %d Y: %d\n", k, agent.X, agent.Y);
                 agents[k] = agent;
             }
         }
 
-        for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++)
         {
-            Agent agent = agents[i];
-            contagioExterno(&agent, &results);
-            tiempoIncSinCurRec(&agent);
-            casosFatales(&agent, &results);
-            agents[i] = agent;
+            Agent agent = agents[j];
+            contagioExterno(&agent, &results, N, i);
+            tiempoIncSinCurRec(&agent, &results, N, i);
+            casosFatales(&agent, &results, N, i);
+            agents[j] = agent;
         }
-        printf("    Numero de casos acumulados: %d\n", results.cAcum);
+        printf("    Numero de casos acumulados de agentes contagiados: %d\n", results.cAcum);
         printf("    Numero de nuevos casos positivos por dia: %d\n", results.cXDia);
-        printf("    Numero de nuevos casos fatales acumulados: %d\n", results.cFatAcum);
-        printf("    Numero de nuevos casos fatales por dia: %d\n", results.cFatXDia);
-        printf("--------------------------\n");
+        printf("    Numero de casos acumulados de agentes recuperados: %d\n", results.cAcumAgRecup);
+        printf("    Numero de casos recuperados por dia: %d\n", results.cRecupXDia);
+        printf("    Numero de casos fatales acumulados: %d\n", results.cFatAcum);
+        printf("    Numero de casos fatales por dia: %d\n", results.cFatXDia);
+        printf("------------------------------------------------------\n");
         results.cXDia = 0;
         results.cFatXDia = 0;
+        results.cRecupXDia = 0;
     }
 
+    printf("Resultados Finales\n");
+    printf("    Numero de casos acumulados de agentes contagiados: %d\n", results.cAcum);
+    printf("    Numero de casos acumulados de agentes recuperados: %d\n", results.cAcumAgRecup);
+    printf("    Numero de casos fatales acumulados: %d\n", results.cFatAcum);
+    printf("    Dia en que se contagio el primer agente: %d\n", results.cZero);
+    printf("    Dia en que se contagio el 50%% de la poblacion: %d\n", results.c50per);
+    printf("    Dia en que se contagio el 100%% de la poblacion: %d\n", results.c100per);
+    printf("    Dia en que se contagio el 100%% de la poblacion: %d\n", results.cFatPrim);
     return 0;
 }
