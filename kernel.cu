@@ -194,6 +194,51 @@ __global__ void contagioExterno_GPU(Agent* A, curandState* globalState, int n)
     A[idx] = ai;
 }
 
+__global__ void tiempoIncSinCurRec_GPU(Agent* A, curandState* globalState)
+{
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    Agent ai = A[idx];
+    int sd = ai.S;
+
+    if(sd == 2 || sd == -2)
+    {
+        return;
+    }
+
+    int trecd1 = ai.Trec;
+
+    if(sd < 0)
+    {
+        trecd1 -= 1;
+        if (trecd1 == 0)
+        {
+            ai.S = 2;
+            A[idx] = ai;
+            return;
+        }
+    }
+
+    int tincd = ai.Tinc;
+    int sd1 = -1;
+
+    if (tincd > 0)
+    {
+        sd1 = sd;
+    }
+
+    int tincd1 = tincd;
+
+    if (sd > 0)
+    {
+        tincd1 -= 1;
+    }
+
+    ai.Trec = trecd1;
+    ai.S = sd1;
+    ai.Tinc = tincd1;
+    A[idx] = ai;
+}
+
 __host__ void check_CUDA_error(const char* msj) {
 	cudaError_t error;
 	cudaDeviceSynchronize();
@@ -326,6 +371,37 @@ __host__ void contagioExterno(Agent *host_agents, Simulacion *host_simulacion)
     cudaFree(dev_states);
 }
 
+__host__ void tiempoIncSinCurRec(Agent *host_agents, Simulacion *host_simulacion)
+{
+    Agent* dev_agents;
+    curandState* dev_states;
+    int n = host_simulacion->N;
+
+    cudaMalloc((void**)&dev_agents, n*sizeof(Agent));
+    check_CUDA_error("Error en cudaMalloc dev_agents");
+    cudaMalloc((void**)&dev_states, n*sizeof(curandState));
+    check_CUDA_error("Error en cudaMalloc dev_states");
+
+    cudaMemcpy(dev_agents, host_agents, n*sizeof(Agent), cudaMemcpyHostToDevice);
+    check_CUDA_error("Error en cudaMalloc host_agents-->dev_agents");
+
+    dim3 block(THREADS_N);
+    dim3 grid(BLOCKS_N);
+
+    setup_kernel<<<grid,block>>>(dev_states, time(NULL));
+    check_CUDA_error("Error en kernel setup_kernel");
+    cudaDeviceSynchronize();
+    tiempoIncSinCurRec_GPU<<<grid,block>>>(dev_agents, dev_states);
+    check_CUDA_error("Error en kernel tiempoIncSinCurRec_GPU");
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(host_agents, dev_agents, n*sizeof(Agent), cudaMemcpyDeviceToHost);
+    check_CUDA_error("Error en cudaMalloc dev_agents-->host_agents");
+
+    cudaFree(dev_agents);
+    cudaFree(dev_states);
+}
+
 int main(){
     const int N = 10240;
     const int DAYS = 100;
@@ -349,6 +425,7 @@ int main(){
             movilidad(agents, &simulacion);
         }
         contagioExterno(agents, &simulacion);
+        tiempoIncSinCurRec(agents, &simulacion);
         printAgent(agents[2000]);
         printf("------------------------\n");
     } 
