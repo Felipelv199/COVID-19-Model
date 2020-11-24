@@ -6,6 +6,9 @@
 
 #include "kernel.h"
 
+#define THREADS_N 1024
+#define BLOCKS_N 10
+
 using namespace std;
 
 __global__ void setup_kernel (curandState* state, unsigned long seed)
@@ -31,6 +34,62 @@ __global__ void inicializacion_GPU(Agent* A, curandState* globalState, int PQ)
     globalState[idx] = localState;
 }
 
+__global__ void contagio_GPU(Agent* A, curandState* globalState, int r, int n)
+{
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    curandState localState = globalState[idx];
+    Agent ai = A[idx];
+    int sd = ai.S;
+
+    if(sd != 0){
+        return;
+    }
+
+    int beta = 0;
+    int sigma = 0;
+
+    for(int i=0; i<n; i++)
+    {
+        if(i != idx)
+        {
+            Agent aj = A[i];
+            if (aj.S > 0)
+            {
+                beta = 1;
+            }
+            else
+            {
+                beta = 0;
+            }
+            
+            int x = ai.X;
+            int y = ai.Y;
+            double distance = sqrt((float)(x * x) + (float)(y * y));
+
+            if (distance <= r)
+            {
+                sigma += distance * beta;
+            }
+        }
+    }
+
+    int alfa = 0;
+
+    if (sigma >= 1)
+    {
+        alfa = 1;
+    }
+
+    float random = (curand_uniform(&localState) * 100) / 100.0;
+    int Pcond = ai.Pcon;
+
+    if (random <= Pcond)
+    {
+        ai.S = random * alfa;
+        A[idx] = ai;
+    }
+}
+
 __host__ void check_CUDA_error(const char* msj) {
 	cudaError_t error;
 	cudaDeviceSynchronize();
@@ -41,16 +100,16 @@ __host__ void check_CUDA_error(const char* msj) {
 }
 
 __host__ void inicializacion(int n, int pq, Agent *host_agents){
-    curandState* dev_states;
     Agent* dev_agents;
+    curandState* dev_states;
 
     cudaMalloc((void**)&dev_states, n*sizeof(curandState));
     check_CUDA_error("Error en cudaMalloc dev_states");
     cudaMalloc((void**)&dev_agents, n*sizeof(Agent));
     check_CUDA_error("Error en cudaMalloc dev_agents");
 
-    dim3 block(1024);
-    dim3 grid(10);
+    dim3 block(THREADS_N);
+    dim3 grid(BLOCKS_N);
 
     setup_kernel<<<grid,block>>>(dev_states, time(NULL));
     check_CUDA_error("Error en kernel setup_kernel");
@@ -66,23 +125,58 @@ __host__ void inicializacion(int n, int pq, Agent *host_agents){
     cudaFree(dev_states);
 }
 
+__host__ void contagio(Agent *host_agents, Simulacion *host_simulacion, int n){
+    Agent* dev_agents;
+    curandState* dev_states;
+
+    cudaMalloc((void**)&dev_agents, n*sizeof(Agent));
+    check_CUDA_error("Error en cudaMalloc dev_agents");
+    cudaMalloc((void**)&dev_states, n*sizeof(curandState));
+    check_CUDA_error("Error en cudaMalloc dev_states");
+
+    cudaMemcpy(dev_agents, host_agents, n*sizeof(Agent), cudaMemcpyHostToDevice);
+    check_CUDA_error("Error en cudaMalloc host_agents-->dev_agents");
+
+    dim3 block(THREADS_N);
+    dim3 grid(BLOCKS_N);
+
+    setup_kernel<<<grid,block>>>(dev_states, time(NULL));
+    check_CUDA_error("Error en kernel setup_kernel");
+    cudaDeviceSynchronize();
+    contagio_GPU<<<grid, block>>>(dev_agents, dev_states, host_simulacion->R, host_simulacion->N);
+    check_CUDA_error("Error en kernel contagio_GPU");
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(host_agents, dev_agents, n*sizeof(Agent), cudaMemcpyDeviceToHost);
+    check_CUDA_error("Error en cudaMalloc host_agents-->dev_agents");
+
+    cudaFree(dev_agents);
+    cudaFree(dev_states);
+}
+
+__host__ void printAgent(Agent ai)
+{
+    printf("X: %d, Y: %d, S: %d, Pcon: %f, Pext: %f, Pfat: %f, Pmov: %f, Psmo: %f, Tinc: %d\n", ai.X, ai.Y, ai.S, ai.Pcon, ai.Pext, ai.Pfat, ai.Pmov, ai.Psmo, ai.Tinc);
+}
+
 int main(){
     const int N = 10240;
     const int DAYS = 100;
-    Simulacion sim;
-    sim.N = N;
-    sim.dmax = DAYS;
+    Simulacion simulacion;
+    simulacion.N = N;
+    simulacion.dmax = DAYS;
+    int mM = simulacion.Mmax;
     Agent* agents;
 
     agents = (Agent*)malloc(N*sizeof(Agent));
 
-    inicializacion(N, sim.PQ, agents);
+    inicializacion(N, simulacion.PQ, agents);
 
     for(int i=0; i<DAYS; i++)
     {
         for (int j = 0; j < mM; j++)
-        {
-            
+        {   
+            contagio(agents, &simulacion, N);
         }
     } 
 
