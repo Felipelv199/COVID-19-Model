@@ -3,8 +3,7 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "curand_kernel.h"
-
-#include "kernel.h"
+#include "structures.h"
 
 #define THREADS_N 1024
 #define BLOCKS_N 10
@@ -22,8 +21,8 @@ __global__ void inicializacion_GPU(Agent* A, curandState* globalState, int PQ)
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     curandState localState = globalState[idx];
     Agent newAgent;
-    newAgent.X = (int)(0 + curand_uniform(&localState) * (PQ - 0));
-    newAgent.Y = (int)(0 + curand_uniform(&localState) * (PQ - 0));
+    newAgent.X = (0 + curand_uniform(&localState) * (PQ - 0));
+    newAgent.Y = (0 + curand_uniform(&localState) * (PQ - 0));
     newAgent.Pcon = (2 + curand_uniform(&localState) * (3 - 2)) / 100.0;
     newAgent.Pext = (2 + curand_uniform(&localState) * (3 - 2)) / 100.0;
     newAgent.Pfat = (7 + curand_uniform(&localState) * (70 - 7)) / 1000.0;
@@ -34,10 +33,11 @@ __global__ void inicializacion_GPU(Agent* A, curandState* globalState, int PQ)
     globalState[idx] = localState;
 }
 
-__global__ void contagio_GPU(Agent* A, curandState* globalState, int r, int n, Results* R)
+__global__ void contagio_GPU(Agent* A, curandState* globalState, float r, int n, int *nuevos)
 {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     curandState localState = globalState[idx];
+    nuevos[idx] = 0;
     Agent ai = A[idx];
     int sd = ai.S;
 
@@ -63,8 +63,8 @@ __global__ void contagio_GPU(Agent* A, curandState* globalState, int r, int n, R
                 beta = 0;
             }
             
-            int x = aj.X - ai.X;
-            int y = aj.Y - ai.Y;
+            float x = aj.X - ai.X;
+            float y = aj.Y - ai.Y;
             double distance = sqrt((float)((x * x) + (y * y)));
             
             if (distance <= r)
@@ -81,22 +81,24 @@ __global__ void contagio_GPU(Agent* A, curandState* globalState, int r, int n, R
         alfa = 1;
     }
 
-    float random = curand_uniform(&localState);
+    float random = curand_uniform(&localState)/10;
     float Pcond = ai.Pcon;
-
+    //printf("random: %f Pcond: %f\n", random, Pcond);
     if (random <= Pcond)
     {
         ai.S = alfa;
         A[idx] = ai;
-    }
-
-    if(A[idx].S == 1)
-    {
-        R->cXDia = R->cXDia + 1;
+        if(alfa == 1)
+        {
+            nuevos[idx]++;
+        }
+        
+        
+        
     }
 }
 
-__global__ void movilidad_GPU(Agent* A, curandState* globalState, int pq, int lMax, Results* R)
+__global__ void movilidad_GPU(Agent* A, curandState* globalState, float pq, float lMax)
 {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     curandState localState = globalState[idx];
@@ -116,17 +118,17 @@ __global__ void movilidad_GPU(Agent* A, curandState* globalState, int pq, int lM
         delta = 1;
     }
 
-    int p = pq;
-    int q = pq;
-    int xd = ai.X;
-    int yd = ai.Y;
+    float p = pq;
+    float q = pq;
+    float xd = ai.X;
+    float yd = ai.Y;
 
-    int X_2 = p*curand_uniform(&localState)*(1-delta);
-    int X = ((xd + (2*(curand_uniform(&localState)-1)*lMax))*delta) + X_2;
+    float X_2 = p*curand_uniform(&localState)*(1-delta);
+    float X = ((xd + (2*curand_uniform(&localState)-1))*lMax)*delta + X_2;
     
-    int Y_2 = q*curand_uniform(&localState)*(1-delta);
-    int Y = ((yd + (2*(curand_uniform(&localState)-1)*lMax))*delta) + X_2;
-
+    float Y_2 = q*curand_uniform(&localState)*(1-delta);
+    float Y = ((yd + (2*curand_uniform(&localState)-1))*lMax)*delta + Y_2;
+    
     int gamma = 0;
     float pMovd = ai.Pmov;
 
@@ -135,8 +137,8 @@ __global__ void movilidad_GPU(Agent* A, curandState* globalState, int pq, int lM
         gamma = 1;
     }
 
-    int xd1 = X;
-    int yd1 = Y;
+    float xd1 = X;
+    float yd1 = Y;
 
     if (xd1 > pq)
     {
@@ -170,42 +172,46 @@ __global__ void movilidad_GPU(Agent* A, curandState* globalState, int pq, int lM
     A[idx] = ai;
 }
 
-__global__ void contagioExterno_GPU(Agent* A, curandState* globalState, int n, Results* R)
+__global__ void contagioExterno_GPU(Agent* A, curandState* globalState, int n, int* R)
 {
+    
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    R[idx] = 0;
     curandState localState = globalState[idx];
     Agent ai = A[idx];
     int sd = ai.S;
 
-    if (sd == 2 || sd == -2)
+    if(sd == 0)
     {
-        return;
-    }
+        int epsilon = 1;
 
-    int epsilon = 1;
-
-    if (sd != 0)
-    {
-        epsilon = 0;
-    }
-
-    int sd1 = sd;
-    float pExtd = ai.Pext;
-
-    if(curand_uniform(&localState) <= pExtd)
-    {
-        if (epsilon > 0)
+        if (sd != 0)
         {
-            sd1 = 1;
+            epsilon = 0;
+        }
+
+        int sd1 = sd;
+        float pExtd = ai.Pext;
+        float random = curand_uniform(&localState);
+        
+        if( random <= pExtd)
+        {
+            if (epsilon > 0)
+            {
+                //printf("%f random %fPext\n", random, pExtd);
+                sd1 = 1;
+            }
+        }
+        
+        ai.S = sd1;
+        A[idx] = ai;
+        if(A[idx].S == 1)
+        {
+            R[idx]++;
         }
     }
+
     
-    ai.S = sd1;
-    A[idx] = ai;
-    if(A[idx].S == 1)
-    {
-        R->cXDia++;
-    }
 }
 
 __global__ void tiempoIncSinCurRec_GPU(Agent* A, curandState* globalState, Results* R)
@@ -220,39 +226,44 @@ __global__ void tiempoIncSinCurRec_GPU(Agent* A, curandState* globalState, Resul
     }
 
     int trecd1 = ai.Trec;
+    
 
-    if(sd < 0)
+    if(sd == -1)
     {
         trecd1 -= 1;
         if (trecd1 == 0)
         {
             ai.S = 2;
-            A[idx] = ai;
-            R->cAcumAgRecup++;
             R->cRecupXDia++;
-            return;
+            
         }
+        ai.Trec = trecd1;
+        A[idx] = ai;
     }
-
-    int tincd = ai.Tinc;
-    int sd1 = -1;
-
-    if (tincd > 0)
+    else if(sd == 1)
     {
-        sd1 = sd;
+        int tincd = ai.Tinc;
+
+        tincd -= 1;
+        
+
+        int sd1 = -1;
+
+        if (tincd > 0)
+        {
+            sd1 = sd;
+        }
+        
+        
+        ai.S = sd1;
+        ai.Tinc = tincd;
+        A[idx] = ai;
     }
 
-    int tincd1 = tincd;
+    
+    
 
-    if (sd > 0)
-    {
-        tincd1 -= 1;
-    }
-
-    ai.Trec = trecd1;
-    ai.S = sd1;
-    ai.Tinc = tincd1;
-    A[idx] = ai;
+    
 }
 
 __global__ void casosFatales_GPU(Agent* A, curandState* globalState, Results* R)
@@ -283,7 +294,6 @@ __global__ void casosFatales_GPU(Agent* A, curandState* globalState, Results* R)
         if (rho > 0)
         {
             sd1 = -2;
-            R->cFatAcum++;
             R->cFatXDia++;
         }
     }
@@ -303,7 +313,7 @@ __host__ void check_CUDA_error(const char* msj) {
 
 __host__ void printAgent(Agent ai)
 {
-    printf("X: %d, Y: %d, S: %d, Pcon: %f, Pext: %f, Pfat: %f, Pmov: %f, Psmo: %f, Tinc: %d, Trec: %d\n", ai.X, ai.Y, ai.S, ai.Pcon, ai.Pext, ai.Pfat, ai.Pmov, ai.Psmo, ai.Tinc, ai.Trec);
+    printf("X: %f, Y: %f, S: %d, Pcon: %f, Pext: %f, Pfat: %f, Pmov: %f, Psmo: %f, Tinc: %d, Trec: %d\n", ai.X, ai.Y, ai.S, ai.Pcon, ai.Pext, ai.Pfat, ai.Pmov, ai.Psmo, ai.Tinc, ai.Trec);
 }
 
 __host__ void inicializacion(int n, int pq, Agent *host_agents){
@@ -332,42 +342,60 @@ __host__ void inicializacion(int n, int pq, Agent *host_agents){
     cudaFree(dev_states);
 }
 
-__host__ void contagio(Agent *host_agents, Simulacion *host_simulacion){
+
+
+__host__ int contagio(Agent *host_agents, Simulacion *host_simulacion){
     Agent* dev_agents;
     curandState* dev_states;
-    Results * devResults;
     int n = host_simulacion->N;
+    float r = host_simulacion->R;
+    int *cXdia;
+
+    cXdia = (int*)malloc(n*sizeof(int));
+
+    int * devcXDia;
+    int nuevos = 0;
 
     cudaMalloc((void**)&dev_agents, n*sizeof(Agent));
     check_CUDA_error("Error en cudaMalloc dev_agents");
     cudaMalloc((void**)&dev_states, n*sizeof(curandState));
     check_CUDA_error("Error en cudaMalloc dev_states");
-    cudaMalloc((void**)&devResults, sizeof(Results));
-    check_CUDA_error("Error en cudaMalloc devResults");
+    cudaMalloc((void**)&devcXDia, n*sizeof(int));
+    check_CUDA_error("Error en cudaMalloc devDia");
 
     cudaMemcpy(dev_agents, host_agents, n*sizeof(Agent), cudaMemcpyHostToDevice);
     check_CUDA_error("Error en cudaMalloc host_agents-->dev_agents");
-    cudaMemcpy(devResults, &host_simulacion->results, sizeof(Results), cudaMemcpyHostToDevice);
-    check_CUDA_error("Error en cudaMalloc host_results-->devResults");
+    cudaMemcpy(devcXDia, cXdia, n*sizeof(int), cudaMemcpyHostToDevice);
+    check_CUDA_error("Error en cudaMalloc cXdia-->devcXDia");
 
     dim3 block(THREADS_N);
     dim3 grid(BLOCKS_N);
 
     setup_kernel<<<grid,block>>>(dev_states, time(NULL));
+    cudaDeviceSynchronize();
     check_CUDA_error("Error en kernel setup_kernel");
+    
+    contagio_GPU<<<grid, block>>>(dev_agents, dev_states, r, n, devcXDia);
     cudaDeviceSynchronize();
-    contagio_GPU<<<grid, block>>>(dev_agents, dev_states, host_simulacion->R, n, devResults);
     check_CUDA_error("Error en kernel contagio_GPU");
-    cudaDeviceSynchronize();
-
+    
+    cudaMemcpy(cXdia, devcXDia, n*sizeof(int), cudaMemcpyDeviceToHost);
+    check_CUDA_error("Error en cudaMalloc devcXDia-->cXDia");
     cudaMemcpy(host_agents, dev_agents, n*sizeof(Agent), cudaMemcpyDeviceToHost);
     check_CUDA_error("Error en cudaMalloc host_agents-->dev_agents");
-    cudaMemcpy(&host_simulacion->results, devResults, sizeof(Results), cudaMemcpyDeviceToHost);
-    check_CUDA_error("Error en cudaMalloc devResults-->host_results");
+
+    for(int i =0; i < n; i++)
+    {
+        nuevos+= cXdia[i];
+        //printAgent(host_agents[i]);
+    }
 
     cudaFree(dev_agents);
     cudaFree(dev_states);
-    cudaFree(devResults);
+    cudaFree(devcXDia);
+    free(cXdia);
+
+    return nuevos;
 }
 
 __host__ void movilidad(Agent *host_agents, Simulacion *host_simulacion)
@@ -376,6 +404,8 @@ __host__ void movilidad(Agent *host_agents, Simulacion *host_simulacion)
     curandState* dev_states;
     Results* devResults;
     int n = host_simulacion->N;
+    float PQ = host_simulacion->PQ;
+    float lmax = host_simulacion->lmax;
 
     cudaMalloc((void**)&dev_agents, n*sizeof(Agent));
     check_CUDA_error("Error en cudaMalloc dev_agents");
@@ -393,11 +423,13 @@ __host__ void movilidad(Agent *host_agents, Simulacion *host_simulacion)
     dim3 grid(BLOCKS_N);
 
     setup_kernel<<<grid,block>>>(dev_states, time(NULL));
+    cudaDeviceSynchronize();
+
     check_CUDA_error("Error en kernel setup_kernel");
+    movilidad_GPU<<<grid, block>>>(dev_agents, dev_states, PQ, lmax);
     cudaDeviceSynchronize();
-    movilidad_GPU<<<grid, block>>>(dev_agents, dev_states, host_simulacion->PQ, host_simulacion->lmax, devResults);
+
     check_CUDA_error("Error en kernel movilidad_GPU");
-    cudaDeviceSynchronize();
 
     cudaMemcpy(host_agents, dev_agents, n*sizeof(Agent), cudaMemcpyDeviceToHost);
     check_CUDA_error("Error en cudaMalloc host_agents-->dev_agents");
@@ -409,24 +441,29 @@ __host__ void movilidad(Agent *host_agents, Simulacion *host_simulacion)
     cudaFree(devResults);
 }
 
-__host__ void contagioExterno(Agent *host_agents, Simulacion *host_simulacion)
+__host__ int contagioExterno(Agent *host_agents, Simulacion *host_simulacion)
 {
     Agent* dev_agents;
     curandState* dev_states;
-    Results* devResults;
     int n = host_simulacion->N;
+    int *cXdia;
+
+    cXdia = (int*)malloc(n*sizeof(int));
+
+    int * devcXDia;
+    int nuevos = 0;
 
     cudaMalloc((void**)&dev_agents, n*sizeof(Agent));
     check_CUDA_error("Error en cudaMalloc dev_agents");
     cudaMalloc((void**)&dev_states, n*sizeof(curandState));
     check_CUDA_error("Error en cudaMalloc dev_states");
-    cudaMalloc((void**)&devResults, sizeof(Results));
-    check_CUDA_error("Error en cudaMalloc devResults");
+    cudaMalloc((void**)&devcXDia, n*sizeof(int));
+    check_CUDA_error("Error en cudaMalloc devDia");
 
     cudaMemcpy(dev_agents, host_agents, n*sizeof(Agent), cudaMemcpyHostToDevice);
     check_CUDA_error("Error en cudaMalloc host_agents-->dev_agents");
-    cudaMemcpy(devResults, &host_simulacion->results, sizeof(Results), cudaMemcpyHostToDevice);
-    check_CUDA_error("Error en cudaMalloc host_results-->devResults");
+    cudaMemcpy(devcXDia, cXdia, n*sizeof(int), cudaMemcpyHostToDevice);
+    check_CUDA_error("Error en cudaMalloc cXdia-->devcXDia");
 
     dim3 block(THREADS_N);
     dim3 grid(BLOCKS_N);
@@ -434,18 +471,27 @@ __host__ void contagioExterno(Agent *host_agents, Simulacion *host_simulacion)
     setup_kernel<<<grid,block>>>(dev_states, time(NULL));
     check_CUDA_error("Error en kernel setup_kernel");
     cudaDeviceSynchronize();
-    contagioExterno_GPU<<<grid,block>>>(dev_agents, dev_states, host_simulacion->N, devResults);
+    contagioExterno_GPU<<<grid,block>>>(dev_agents, dev_states, n, devcXDia);
     check_CUDA_error("Error en kernel contagioExterno_GPU");
     cudaDeviceSynchronize();
 
     cudaMemcpy(host_agents, dev_agents, n*sizeof(Agent), cudaMemcpyDeviceToHost);
     check_CUDA_error("Error en cudaMalloc dev_agents-->host_agents");
-    cudaMemcpy(&host_simulacion->results, devResults, sizeof(Results), cudaMemcpyDeviceToHost);
-    check_CUDA_error("Error en cudaMalloc devResults-->host_results");
+    cudaMemcpy(cXdia, devcXDia, n*sizeof(int), cudaMemcpyDeviceToHost);
+    check_CUDA_error("Error en cudaMalloc devcXDia-->cXDia");
+
+    for(int i =0; i < n; i++)
+    {
+        nuevos+= cXdia[i];
+        //printAgent(host_agents[i]);
+    }
 
     cudaFree(dev_agents);
     cudaFree(dev_states);
-    cudaFree(devResults);
+    cudaFree(devcXDia);
+    free(cXdia);
+
+    return nuevos;
 }
 
 __host__ void tiempoIncSinCurRec(Agent *host_agents, Simulacion *host_simulacion)
@@ -526,58 +572,132 @@ __host__ void casosFatales(Agent *host_agents, Simulacion *host_simulacion)
     cudaFree(devResults);
 }
 
+__host__ ResultsDays nuevoDia(int movimientos, Agent *host_agents, Simulacion *host_simulacion)
+{
+
+    ResultsDays results;
+
+    Agent* dev_agents;
+    curandState* dev_states;
+    int * devcXDia;
+
+    int n = host_simulacion->N;
+    int nuevos = 0;
+
+    float r = host_simulacion->R;
+    float PQ = host_simulacion->PQ;
+    float lmax = host_simulacion->lmax;
+
+    int *cXdia;
+    cXdia = (int*)malloc(n*sizeof(int));
+
+    cudaMalloc((void**)&dev_agents, n*sizeof(Agent));
+    check_CUDA_error("Error en cudaMalloc dev_agents");
+    cudaMalloc((void**)&dev_states, n*sizeof(curandState));
+    check_CUDA_error("Error en cudaMalloc dev_states");
+    cudaMalloc((void**)&devcXDia, n*sizeof(int));
+    check_CUDA_error("Error en cudaMalloc devDia");
+
+    cudaMemcpy(dev_agents, host_agents, n*sizeof(Agent), cudaMemcpyHostToDevice);
+    check_CUDA_error("Error en cudaMalloc host_agents-->dev_agents");
+    cudaMemcpy(devcXDia, cXdia, n*sizeof(int), cudaMemcpyHostToDevice);
+    check_CUDA_error("Error en cudaMalloc cXdia-->devcXDia");
+
+    dim3 block(THREADS_N);
+    dim3 grid(BLOCKS_N);
+
+    setup_kernel<<<grid,block>>>(dev_states, time(NULL));
+    cudaDeviceSynchronize();
+    check_CUDA_error("Error en kernel setup_kernel");
+    
+    contagio_GPU<<<grid, block>>>(dev_agents, dev_states, r, n, devcXDia);
+    cudaDeviceSynchronize();
+    check_CUDA_error("Error en kernel contagio_GPU");
+
+    movilidad_GPU<<<grid, block>>>(dev_agents, dev_states, PQ, lmax);
+    cudaDeviceSynchronize();
+
+    check_CUDA_error("Error en kernel movilidad_GPU");
+    cudaMemcpy(host_agents, dev_agents, n*sizeof(Agent), cudaMemcpyDeviceToHost);
+    check_CUDA_error("Error en cudaMalloc host_agents-->dev_agents");
+
+    cudaMemcpy(cXdia, devcXDia, n*sizeof(int), cudaMemcpyDeviceToHost);
+    check_CUDA_error("Error en cudaMalloc devcXDia-->cXDia");
+    cudaMemcpy(host_agents, dev_agents, n*sizeof(Agent), cudaMemcpyDeviceToHost);
+    check_CUDA_error("Error en cudaMalloc host_agents-->dev_agents");
+
+    for(int i =0; i < n; i++)
+    {
+        nuevos+= cXdia[i];
+        //printAgent(host_agents[i]);
+    }
+
+    cudaFree(dev_agents);
+    cudaFree(dev_states);
+    cudaFree(devcXDia);
+    free(cXdia);
+
+
+    return results;
+}
+
 int main(){
-    const int N = 10240;
-    const int DAYS = 50;
+    const int N = THREADS_N * BLOCKS_N;
+    const int DAYS = 31;
     Simulacion simulacion;
     simulacion.N = N;
     simulacion.dmax = DAYS;
     int mM = simulacion.Mmax;
     Agent* agents;
-    ResultsDays* daysResults;
 
     agents = (Agent*)malloc(N*sizeof(Agent));
-    daysResults = (ResultsDays*)malloc(DAYS*sizeof(ResultsDays));
 
     inicializacion(N, simulacion.PQ, agents);
 
     for(int i=1; i<=DAYS; i++)
     {
-        
+        simulacion.results.cXDia = 0;
+        simulacion.results.cRecupXDia = 0;
+        simulacion.results.cFatXDia = 0;
 
         for (int j = 0; j < mM; j++)
         {   
-            contagio(agents, &simulacion);
+            simulacion.results.cXDia += contagio(agents, &simulacion);
             movilidad(agents, &simulacion);
         }
-        contagioExterno(agents, &simulacion);
+        simulacion.results.cXDia += contagioExterno(agents, &simulacion);
         tiempoIncSinCurRec(agents, &simulacion);
         casosFatales(agents, &simulacion);
         
-        daysResults[i] = {simulacion.results.cXDia, simulacion.results.cRecupXDia, simulacion.results.cFatXDia};
-        simulacion.results.cAcum += daysResults[i].c;
+        
+        simulacion.results.cAcum += simulacion.results.cXDia;
+        simulacion.results.cAcumAgRecup += simulacion.results.cRecupXDia;
+        simulacion.results.cFatAcum += simulacion.results.cFatXDia;
         if (simulacion.results.cAcum == simulacion.results.cXDia && simulacion.results.cAcum > 0)
         {
             simulacion.results.cZero = i;
         }
+        //printf("%d es aqui, %d,%d\n", i, simulacion.results.cAcumAgRecup, simulacion.results.cRecupXDia);
         if (simulacion.results.cAcumAgRecup == simulacion.results.cRecupXDia && simulacion.results.cAcumAgRecup > 0)
         {
+            
             simulacion.results.recupPrim = i;
         }
         if (N / 2 == simulacion.results.cAcumAgRecup)
         {
             simulacion.results.recup50per = i;
         }
-        else if (N == simulacion.results.cAcumAgRecup)
+        if (N == simulacion.results.cAcumAgRecup)
         {
             simulacion.results.recup100per = i;
         }
 
         if (simulacion.results.cFatAcum == simulacion.results.cFatXDia && simulacion.results.cFatAcum > 0)
         {
+            //printf("%d es aqui tambien\n", i);
             simulacion.results.cFatPrim = i;
         }
-        else if (N / 2 == simulacion.results.cFatAcum)
+        if (N / 2 == simulacion.results.cFatAcum)
         {
             simulacion.results.cFat50per = i;
         }
@@ -587,17 +707,15 @@ int main(){
         }
         
         printf("Dia %d\n", i);
-        printf("    Numero de nuevos casos positivos por dia: %d\n", daysResults[i].c);
-        printf("    Numero de casos recuperados por dia: %d\n", daysResults[i].cRecup);
-        printf("    Numero de casos fatales por dia: %d\n", daysResults[i].cFat);
+        printf("    Numero de nuevos casos positivos por dia: %d\n", simulacion.results.cXDia);
+        printf("    Numero de casos recuperados por dia: %d\n", simulacion.results.cRecupXDia);
+        printf("    Numero de casos fatales por dia: %d\n", simulacion.results.cFatXDia);
         
         printf("------------------------\n");
         
         
 
-        simulacion.results.cXDia = 0;
-        simulacion.results.cRecupXDia = 0;
-        simulacion.results.cFatXDia = 0;
+        
 
     } 
 
@@ -616,5 +734,6 @@ int main(){
     printf("    Dia en que ocurrio el 100%% de los casos fatales: %d\n", simulacion.results.cFat100per);
 
     free(agents);
+    
     return 0;
 }

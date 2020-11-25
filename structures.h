@@ -8,8 +8,8 @@ struct Agent
     int Tinc;
     int Trec = 14;
     int S = 0;
-    int X = 0;
-    int Y = 0;
+    float X = 0;
+    float Y = 0;
 };
 
 
@@ -43,9 +43,9 @@ struct Simulacion
     int N;
     int dmax;
     int Mmax = 10;
-    int lmax = 500;
-    int R = 100;
-    int PQ = 5000;
+    float lmax = 5;
+    float R = 1;
+    float PQ = 500;
     Results results;
 };
 
