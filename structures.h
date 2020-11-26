@@ -16,12 +16,10 @@ struct Agent
 
 struct Results
 {
+    
     int cAcum = 0;
-    int cXDia = 0;
     int cAcumAgRecup = 0;
-    int cRecupXDia = 0;
     int cFatAcum = 0;
-    int cFatXDia = 0;
 
     int cZero = 0;
     int c50per = 0;

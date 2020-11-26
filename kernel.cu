@@ -334,9 +334,9 @@ __host__ void inicializacion(int n, int pq, Agent *host_agents){
     cudaFree(dev_states);
 }
 
-__host__ float rangeRandom(int min, int max)
+__host__ float rangeRandom()
 {
-    return (rand() % 10001 / 10000.0) ;
+    return (rand() % 1001 / 1000.0) ;
 }
 
 __host__ ResultsDays newDay(int movements, Agent *host_agents, Simulacion *host_simulacion)
@@ -437,13 +437,13 @@ __host__ ResultsDays newDay(int movements, Agent *host_agents, Simulacion *host_
 
         for(int i = 0; i < n; i++)
         {
-            randomContagios[i]  = rangeRandom(0, 1);
-            randomMov1[i] = rangeRandom(0, 1);
-            randomMov2[i] = rangeRandom(0, 1);
-            randomMov3[i] = rangeRandom(0, 1);
-            randomMov4[i] = rangeRandom(0, 1);
-            randomMov5[i] = rangeRandom(0, 1);
-            randomMov6[i] = rangeRandom(0, 1);
+            randomContagios[i]  = rangeRandom();
+            randomMov1[i] = rangeRandom();
+            randomMov2[i] = rangeRandom();
+            randomMov3[i] = rangeRandom();
+            randomMov4[i] = rangeRandom();
+            randomMov5[i] = rangeRandom();
+            randomMov6[i] = rangeRandom();
         }
 
         cudaMemcpy(devrandContagios, randomContagios, n*sizeof(float), cudaMemcpyHostToDevice);
@@ -493,8 +493,8 @@ __host__ ResultsDays newDay(int movements, Agent *host_agents, Simulacion *host_
 
     for(int i = 0; i < n; i++)
     {
-        randomContagiosExt[i]  = rangeRandom(0, 1);
-        randomFat[i]  = rangeRandom(0, 1);
+        randomContagiosExt[i]  = rangeRandom();
+        randomFat[i]  = rangeRandom();
     }    
     
     cudaMemcpy(devrandContagiosExt, randomContagiosExt, n*sizeof(float), cudaMemcpyHostToDevice);
@@ -573,6 +573,17 @@ __host__ ResultsDays newDay(int movements, Agent *host_agents, Simulacion *host_
 }
 
 int main(){
+
+    FILE * file;
+    file = fopen("results.txt", "w");
+    if(file == NULL)
+    {
+        /* File not created hence exit */
+        printf("Unable to create results file.\n");
+        exit(EXIT_FAILURE);
+    }
+    fprintf (file, "\n----------------------------------------------\nResults\n---------------------------------------------- \n");
+
     const int N = THREADS_N * BLOCKS_N;
     const int DAYS = 31;
     Simulacion simulacion;
@@ -585,77 +596,216 @@ int main(){
 
     inicializacion(N, simulacion.PQ, agents);
 
+    ResultsDays *results;
+    results = (ResultsDays*)malloc(DAYS*sizeof(ResultsDays));
+
     for(int i=1; i<=DAYS; i++)
     {
         
 
-        simulacion.results.cXDia = 0;
-        simulacion.results.cRecupXDia = 0;
-        simulacion.results.cFatXDia = 0;
-
-        ResultsDays results = newDay(mM, agents, &simulacion);
+        results[i-1] = newDay(mM, agents, &simulacion);
         
-        simulacion.results.cAcum += results.c;
-        simulacion.results.cAcumAgRecup += results.cRecup;
-        simulacion.results.cFatAcum += results.cFat;
-        if (simulacion.results.cAcum == simulacion.results.cXDia && simulacion.results.cAcum > 0)
+        simulacion.results.cAcum += results[i-1].c;
+        simulacion.results.cAcumAgRecup += results[i-1].cRecup;
+        simulacion.results.cFatAcum += results[i-1].cFat;
+        if (simulacion.results.cAcum == results[i-1].c && simulacion.results.cAcum > 0)
         {
             simulacion.results.cZero = i;
         }
         //printf("%d es aqui, %d,%d\n", i, simulacion.results.cAcumAgRecup, simulacion.results.cRecupXDia);
-        if (simulacion.results.cAcumAgRecup == simulacion.results.cRecupXDia && simulacion.results.cAcumAgRecup > 0)
+        if (simulacion.results.cAcumAgRecup == results[i-1].cRecup && simulacion.results.cAcumAgRecup > 0)
         {
             
             simulacion.results.recupPrim = i;
         }
-        if (N / 2 == simulacion.results.cAcumAgRecup)
-        {
-            simulacion.results.recup50per = i;
-        }
-        if (N == simulacion.results.cAcumAgRecup)
-        {
-            simulacion.results.recup100per = i;
-        }
 
-        if (simulacion.results.cFatAcum == simulacion.results.cFatXDia && simulacion.results.cFatAcum > 0)
+        if (simulacion.results.cFatAcum == results[i-1].cFat && simulacion.results.cFatAcum > 0)
         {
             //printf("%d es aqui tambien\n", i);
             simulacion.results.cFatPrim = i;
         }
-        if (N / 2 == simulacion.results.cFatAcum)
-        {
-            simulacion.results.cFat50per = i;
-        }
-        else if (N == simulacion.results.cFatAcum)
-        {
-            simulacion.results.cFat100per = i;
-        }
+
         
         printf("Dia %d\n", i);
+        fprintf (file, "Dia %d\n", i);
         
-        printf("    Numero de nuevos casos positivos por dia: %d\n", results.c);
-        printf("    Numero de casos recuperados por dia: %d\n", results.cRecup);
-        printf("    Numero de casos fatales por dia: %d\n", results.cFat);
+        printf("    Numero de nuevos casos positivos por dia: %d\n", results[i-1].c);
+        fprintf (file, "    Numero de nuevos casos positivos por dia: %d\n", results[i-1].c);
+
+        printf("    Numero de casos recuperados por dia: %d\n", results[i-1].cRecup);
+        fprintf (file, "    Numero de casos recuperados por dia: %d\n", results[i-1].cRecup);
+
+        printf("    Numero de casos fatales por dia: %d\n", results[i-1].cFat);
+        fprintf (file, "    Numero de casos fatales por dia: %d\n", results[i-1].cFat);
         
         printf("------------------------\n");
+        fprintf (file, "------------------------\n");
         
     } 
 
-    printf("Resultados Finales\n");
-    printf("    Numero de casos acumulados de agentes contagiados: %d\n", simulacion.results.cAcum);
-    printf("    Numero de casos acumulados de agentes recuperados: %d\n", simulacion.results.cAcumAgRecup);
-    printf("    Numero de casos fatales acumulados: %d\n", simulacion.results.cFatAcum);
-    printf("    Dia en que se contagio el primer agente: %d\n", simulacion.results.cZero);
-    printf("    Dia en que se contagio el 50%% de los agentes contagiados: %d\n", simulacion.results.c50per);
-    printf("    Dia en que se contagio el 100%% de los agentes contagiados: %d\n", simulacion.results.c100per);
-    printf("    Dia en que se recupero el primer agente: %d\n", simulacion.results.recupPrim);
-    printf("    Dia en que se recupero el 50%% de los agentes recuperados: %d\n", simulacion.results.recup50per);
-    printf("    Dia en que se recupero el 100%% de los agentes recuperados: %d\n", simulacion.results.recup100per);
-    printf("    Dia en que ocurrio el primer caso fatal: %d\n", simulacion.results.cFatPrim);
-    printf("    Dia en que ocurrio el 50%% de los casos fatales: %d\n", simulacion.results.cFat50per);
-    printf("    Dia en que ocurrio el 100%% de los casos fatales: %d\n", simulacion.results.cFat100per);
+    printf("Resultados Finales de %d Dias\n", DAYS);
+    fprintf (file, "Resultados Finales de %d Dias\n", DAYS);
 
+    printf("    Numero agentes: %d\n", N);
+    fprintf (file, "    Numero agentes: %d\n", N);
+
+    printf("    Numero de casos acumulados de agentes contagiados: %d\n", simulacion.results.cAcum);
+    fprintf (file, "    Numero de casos acumulados de agentes contagiados: %d\n", simulacion.results.cAcum);
+
+    printf("    Numero de casos acumulados de agentes recuperados: %d\n", simulacion.results.cAcumAgRecup);
+    fprintf (file, "    Numero de casos acumulados de agentes recuperados: %d\n", simulacion.results.cAcumAgRecup);
+
+    printf("    Numero de casos fatales acumulados: %d\n", simulacion.results.cFatAcum);
+    fprintf (file, "    Numero de casos fatales acumulados: %d\n", simulacion.results.cFatAcum);
+
+
+    int acum50 = simulacion.results.cAcum/2;
+    int acum100 = simulacion.results.cAcum;
+
+    int recup50 = simulacion.results.cAcumAgRecup / 2;
+    int recup100 = simulacion.results.cAcumAgRecup;
+
+    int fat50 = simulacion.results.cFatAcum / 2;
+    int fat100 = simulacion.results.cFatAcum;
+
+    int c = 0;
+    int rec = 0;
+    int f = 0;
+    for(int i = 0; i < DAYS; i++)
+    {
+        c += results[i].c;
+        if(c >= acum50 && simulacion.results.c50per == 0 && simulacion.results.cAcum > 0)
+        {
+            simulacion.results.c50per = i+1;
+        }
+
+        if(c >= acum100 && simulacion.results.c100per == 0 && simulacion.results.cAcum > 0)
+        {
+            simulacion.results.c100per = i+1;
+        }
+        rec+= results[i].cRecup;
+        if(rec >= recup50 && simulacion.results.recup50per == 0 && simulacion.results.cAcumAgRecup > 0)
+        {
+            simulacion.results.recup50per = i+1;
+        }
+
+        if(rec >= recup100 && simulacion.results.recup100per == 0 && simulacion.results.cAcumAgRecup > 0)
+        {
+            simulacion.results.recup100per =i+1;
+        }
+        f += results[i].cFat;
+        if(f >= fat50 && simulacion.results.cFat50per == 0 && simulacion.results.cFatAcum > 0)
+        {
+            simulacion.results.cFat50per = i+1;
+        }
+
+        if(f >= fat100 && simulacion.results.cFat100per == 0 && simulacion.results.cFatAcum > 0)
+        {
+            simulacion.results.cFat100per = i+1;
+        }
+    }
+
+
+
+
+    if(simulacion.results.cZero == 0)
+    {
+        printf("    Dia en que se contagio el primer agente: N/A");
+        fprintf (file,"    Dia en que se contagio el primer agente: N/A" );
+    }
+    else{
+        printf("    Dia en que se contagio el primer agente: %d\n", simulacion.results.cZero);
+        fprintf (file, "    Dia en que se contagio el primer agente: %d\n", simulacion.results.cZero);
+    }
+
+    if(simulacion.results.c50per == 0)
+    {
+        printf("    Dia en que se contagio el 50%% de los agentes contagiados: N/A\n");
+        fprintf (file, "    Dia en que se contagio el 50%% de los agentes contagiados: N/A\n");
+
+    }
+    else{
+        printf("    Dia en que se contagio el 50%% de los agentes contagiados: %d\n", simulacion.results.c50per);
+        fprintf (file,"    Dia en que se contagio el 50%% de los agentes contagiados: %d\n", simulacion.results.c50per );
+
+    }
+
+    if(simulacion.results.c50per == 0)
+    {
+        printf("    Dia en que se contagio el 100%% de los agentes contagiados: N/A\n");
+        fprintf (file, "    Dia en que se contagio el 100%% de los agentes contagiados: N/A\n");
+
+    }
+    else{
+        printf("    Dia en que se contagio el 100%% de los agentes contagiados: %d\n", simulacion.results.c100per);
+        fprintf (file, "    Dia en que se contagio el 100%% de los agentes contagiados: %d\n", simulacion.results.c100per);
+
+    }
+
+    if(simulacion.results.recupPrim == 0)
+    {
+        printf("    Dia en que se recupero el primer agente: N/A\n");
+        fprintf (file,"    Dia en que se recupero el primer agente: N/A\n" );
+    }
+    else{
+        printf("    Dia en que se recupero el primer agente: %d\n", simulacion.results.recupPrim);
+        fprintf (file, "    Dia en que se recupero el primer agente: %d\n", simulacion.results.recupPrim);
+    }
+    
+    if(simulacion.results.recup50per == 0)
+    {
+        printf("    Dia en que se recupero el 50%% de los agentes recuperados: N/A\n");
+        fprintf (file,"    Dia en que se recupero el 50%% de los agentes recuperados: N/A\n" );
+    }
+    else{
+        printf("    Dia en que se recupero el 50%% de los agentes recuperados: %d\n", simulacion.results.recup50per);
+        fprintf (file,"    Dia en que se recupero el 50%% de los agentes recuperados: %d\n", simulacion.results.recup50per );
+    }
+
+    if(simulacion.results.recup100per == 0)
+    {
+        printf("    Dia en que se recupero el 100%% de los agentes recuperados: N/A\n");
+        fprintf (file, "    Dia en que se recupero el 100%% de los agentes recuperados: N/A\n");
+    }
+    else{
+        printf("    Dia en que se recupero el 100%% de los agentes recuperados: %d\n", simulacion.results.recup100per);
+        fprintf (file, "    Dia en que se recupero el 100%% de los agentes recuperados: %d\n", simulacion.results.recup100per);
+    }
+
+    if(simulacion.results.cFatPrim == 0)
+    {
+        printf("    Dia en que ocurrio el primer caso fatal: N/A\n");
+        fprintf (file,"    Dia en que ocurrio el primer caso fatal: N/A\n" );
+    }
+    else{
+        printf("    Dia en que ocurrio el primer caso fatal: %d\n", simulacion.results.cFatPrim);
+        fprintf (file, "    Dia en que ocurrio el primer caso fatal: %d\n", simulacion.results.cFatPrim);
+    }
+
+    if(simulacion.results.cFat50per == 0)
+    {
+        printf("    Dia en que ocurrio el 50%% de los casos fatales: N/A\n");
+        fprintf (file, "    Dia en que ocurrio el 50%% de los casos fatales: N/A\n");
+    }
+    else{
+        printf("    Dia en que ocurrio el 50%% de los casos fatales: %d\n", simulacion.results.cFat50per);
+        fprintf (file,"    Dia en que ocurrio el 50%% de los casos fatales: %d\n", simulacion.results.cFat50per );
+    }
+    
+    if(simulacion.results.cFat100per == 0)
+    {
+        printf("    Dia en que ocurrio el 100%% de los casos fatales: N/A\n");
+        fprintf (file, "    Dia en que ocurrio el 100%% de los casos fatales: N/A\n");
+    }
+    else{
+        printf("    Dia en que ocurrio el 100%% de los casos fatales: %d\n", simulacion.results.cFat100per);
+        fprintf (file,"    Dia en que ocurrio el 100%% de los casos fatales: %d\n", simulacion.results.cFat100per );
+    }
+    
+    printf("------------------------\n");
+    fprintf (file, "------------------------\n");
     free(agents);
+    free(results);
     
     return 0;
 }

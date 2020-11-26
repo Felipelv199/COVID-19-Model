@@ -1,0 +1,174 @@
+
+----------------------------------------------
+Results
+---------------------------------------------- 
+Dia 1
+    Numero de nuevos casos positivos por dia: 278
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 0
+------------------------
+Dia 2
+    Numero de nuevos casos positivos por dia: 1039
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 0
+------------------------
+Dia 3
+    Numero de nuevos casos positivos por dia: 1298
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 0
+------------------------
+Dia 4
+    Numero de nuevos casos positivos por dia: 1312
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 0
+------------------------
+Dia 5
+    Numero de nuevos casos positivos por dia: 1154
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 11
+------------------------
+Dia 6
+    Numero de nuevos casos positivos por dia: 1044
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 48
+------------------------
+Dia 7
+    Numero de nuevos casos positivos por dia: 873
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 102
+------------------------
+Dia 8
+    Numero de nuevos casos positivos por dia: 727
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 137
+------------------------
+Dia 9
+    Numero de nuevos casos positivos por dia: 505
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 194
+------------------------
+Dia 10
+    Numero de nuevos casos positivos por dia: 446
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 215
+------------------------
+Dia 11
+    Numero de nuevos casos positivos por dia: 336
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 240
+------------------------
+Dia 12
+    Numero de nuevos casos positivos por dia: 246
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 247
+------------------------
+Dia 13
+    Numero de nuevos casos positivos por dia: 225
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 267
+------------------------
+Dia 14
+    Numero de nuevos casos positivos por dia: 161
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 304
+------------------------
+Dia 15
+    Numero de nuevos casos positivos por dia: 112
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 273
+------------------------
+Dia 16
+    Numero de nuevos casos positivos por dia: 98
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 270
+------------------------
+Dia 17
+    Numero de nuevos casos positivos por dia: 90
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 272
+------------------------
+Dia 18
+    Numero de nuevos casos positivos por dia: 63
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 281
+------------------------
+Dia 19
+    Numero de nuevos casos positivos por dia: 51
+    Numero de casos recuperados por dia: 158
+    Numero de casos fatales por dia: 262
+------------------------
+Dia 20
+    Numero de nuevos casos positivos por dia: 35
+    Numero de casos recuperados por dia: 603
+    Numero de casos fatales por dia: 208
+------------------------
+Dia 21
+    Numero de nuevos casos positivos por dia: 28
+    Numero de casos recuperados por dia: 772
+    Numero de casos fatales por dia: 172
+------------------------
+Dia 22
+    Numero de nuevos casos positivos por dia: 18
+    Numero de casos recuperados por dia: 764
+    Numero de casos fatales por dia: 148
+------------------------
+Dia 23
+    Numero de nuevos casos positivos por dia: 16
+    Numero de casos recuperados por dia: 693
+    Numero de casos fatales por dia: 143
+------------------------
+Dia 24
+    Numero de nuevos casos positivos por dia: 15
+    Numero de casos recuperados por dia: 610
+    Numero de casos fatales por dia: 103
+------------------------
+Dia 25
+    Numero de nuevos casos positivos por dia: 10
+    Numero de casos recuperados por dia: 489
+    Numero de casos fatales por dia: 76
+------------------------
+Dia 26
+    Numero de nuevos casos positivos por dia: 10
+    Numero de casos recuperados por dia: 415
+    Numero de casos fatales por dia: 55
+------------------------
+Dia 27
+    Numero de nuevos casos positivos por dia: 11
+    Numero de casos recuperados por dia: 302
+    Numero de casos fatales por dia: 42
+------------------------
+Dia 28
+    Numero de nuevos casos positivos por dia: 8
+    Numero de casos recuperados por dia: 272
+    Numero de casos fatales por dia: 45
+------------------------
+Dia 29
+    Numero de nuevos casos positivos por dia: 6
+    Numero de casos recuperados por dia: 200
+    Numero de casos fatales por dia: 38
+------------------------
+Dia 30
+    Numero de nuevos casos positivos por dia: 1
+    Numero de casos recuperados por dia: 132
+    Numero de casos fatales por dia: 21
+------------------------
+Dia 31
+    Numero de nuevos casos positivos por dia: 5
+    Numero de casos recuperados por dia: 129
+    Numero de casos fatales por dia: 21
+------------------------
+Resultados Finales de 31 Dias
+    Numero agentes: 10240
+    Numero de casos acumulados de agentes contagiados: 10221
+    Numero de casos acumulados de agentes recuperados: 5539
+    Numero de casos fatales acumulados: 4195
+    Dia en que se contagio el primer agente: 1
+    Dia en que se contagio el 50% de los agentes contagiados: 6
+    Dia en que se contagio el 100% de los agentes contagiados: 31
+    Dia en que se recupero el primer agente: 19
+    Dia en que se recupero el 50% de los agentes recuperados: 23
+    Dia en que se recupero el 100% de los agentes recuperados: 31
+    Dia en que ocurrio el primer caso fatal: 5
+    Dia en que ocurrio el 50% de los casos fatales: 16
+    Dia en que ocurrio el 100% de los casos fatales: 31
+------------------------
