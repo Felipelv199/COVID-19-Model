@@ -292,8 +292,8 @@ void casosFatales(Agent *ai, Results *R, int n, int day)
 
 int main()
 {
-    const int N = 1000;
-    const int DAYS = 100;
+    const int N = 1024;
+    const int DAYS = 30;
     Simulacion sim;
     sim.N = N;
     sim.dmax = DAYS;

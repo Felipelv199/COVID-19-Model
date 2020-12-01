@@ -7,7 +7,7 @@
 #include "kernel.h"
 
 #define THREADS_N 1024
-#define BLOCKS_N 10
+#define BLOCKS_N 1
 
 using namespace std;
 
@@ -527,8 +527,8 @@ __host__ void casosFatales(Agent *host_agents, Simulacion *host_simulacion)
 }
 
 int main(){
-    const int N = 10240;
-    const int DAYS = 50;
+    const int N = 1024;
+    const int DAYS = 30;
     Simulacion simulacion;
     simulacion.N = N;
     simulacion.dmax = DAYS;
@@ -541,10 +541,8 @@ int main(){
 
     inicializacion(N, simulacion.PQ, agents);
 
-    for(int i=1; i<=DAYS; i++)
+    for(int i=0; i<DAYS; i++)
     {
-        
-
         for (int j = 0; j < mM; j++)
         {   
             contagio(agents, &simulacion);
@@ -556,50 +554,30 @@ int main(){
         
         daysResults[i] = {simulacion.results.cXDia, simulacion.results.cRecupXDia, simulacion.results.cFatXDia};
         simulacion.results.cAcum += daysResults[i].c;
-        if (simulacion.results.cAcum == simulacion.results.cXDia && simulacion.results.cAcum > 0)
-        {
-            simulacion.results.cZero = i;
-        }
-        if (simulacion.results.cAcumAgRecup == simulacion.results.cRecupXDia && simulacion.results.cAcumAgRecup > 0)
-        {
-            simulacion.results.recupPrim = i;
-        }
-        if (N / 2 == simulacion.results.cAcumAgRecup)
-        {
-            simulacion.results.recup50per = i;
-        }
-        else if (N == simulacion.results.cAcumAgRecup)
-        {
-            simulacion.results.recup100per = i;
-        }
 
-        if (simulacion.results.cFatAcum == simulacion.results.cFatXDia && simulacion.results.cFatAcum > 0)
+        if (simulacion.results.cAcum == daysResults[i].c && simulacion.results.cAcum > 0)
         {
-            simulacion.results.cFatPrim = i;
+            simulacion.results.cZero = i+1;
         }
-        else if (N / 2 == simulacion.results.cFatAcum)
+        if (simulacion.results.cAcumAgRecup == daysResults[i].cRecup && simulacion.results.cAcumAgRecup > 0)
         {
-            simulacion.results.cFat50per = i;
+            simulacion.results.recupPrim = i+1;
         }
-        else if (N == simulacion.results.cFatAcum)
+        if (simulacion.results.cFatAcum == daysResults[i].cFat && simulacion.results.cFatAcum > 0)
         {
-            simulacion.results.cFat100per = i;
+            simulacion.results.cFatPrim = i+1;
         }
         
-        printf("Dia %d\n", i);
+        printf("Dia %d\n", i+1);
         printf("    Numero de nuevos casos positivos por dia: %d\n", daysResults[i].c);
         printf("    Numero de casos recuperados por dia: %d\n", daysResults[i].cRecup);
+        printf("    Numero de casos recuperados acumulados: %d\n", simulacion.results.cAcumAgRecup);
         printf("    Numero de casos fatales por dia: %d\n", daysResults[i].cFat);
-        
         printf("------------------------\n");
-        
-        
-
         simulacion.results.cXDia = 0;
         simulacion.results.cRecupXDia = 0;
         simulacion.results.cFatXDia = 0;
-
-    } 
+    }
 
     printf("Resultados Finales\n");
     printf("    Numero de casos acumulados de agentes contagiados: %d\n", simulacion.results.cAcum);
@@ -615,6 +593,7 @@ int main(){
     printf("    Dia en que ocurrio el 50%% de los casos fatales: %d\n", simulacion.results.cFat50per);
     printf("    Dia en que ocurrio el 100%% de los casos fatales: %d\n", simulacion.results.cFat100per);
 
+    free(daysResults);
     free(agents);
     return 0;
 }
