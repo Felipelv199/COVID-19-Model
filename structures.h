@@ -33,10 +33,6 @@ struct Results
 
     int timeCPu = 0;
     int timeGPU = 0;
-
-    int cXDia = 0;
-    int cFatXDia = 0;
-    int cRecupXDia = 0;
 };
 struct Simulacion
 {

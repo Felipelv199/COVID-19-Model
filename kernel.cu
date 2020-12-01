@@ -5,8 +5,8 @@
 #include "curand_kernel.h"
 #include "structures.h"
 
-#define THREADS_N 100
-#define BLOCKS_N 1
+#define THREADS_N 1240
+#define BLOCKS_N 10
 
 using namespace std;
 
@@ -187,21 +187,16 @@ __global__ void contagioExterno_GPU(Agent* A, int* R, float* random)
 
         int sd1 = sd;
         float pExtd = ai.Pext;
-        
-        //printf("id: %d %f random %fPext\n", idx, random, pExtd);
 
         if( random[idx] <= pExtd)
         {
-
-            sd1 = 1;
-            
+            sd1 = 1;   
         }
         
         ai.S = sd1;
         A[idx] = ai;
         if(A[idx].S == 1)
         {
-            //printf("%d entro\n", idx);
             R[idx]++;
         }
     }
@@ -280,7 +275,6 @@ __global__ void casosFatales_GPU(Agent* A, int* R, float *random)
     int sd1 = sd;
    
     float pFatd = ai.Pfat;
-
     if (random[idx] <= pFatd)
     {
         if (rho > 0)
@@ -864,8 +858,8 @@ int main(){
         printf("    Dia en que ocurrio el 100%% de los casos fatales: %d\n", simulacion.results.cFat100per);
         fprintf (file,"    Dia en que ocurrio el 100%% de los casos fatales: %d\n", simulacion.results.cFat100per );
     }
-    printf("Time GPU: %f miliseconds.\n", elapsedTime);
-    fprintf (file, "Time GPU: %f miliseconds.\n", elapsedTime);
+    printf("Tiempo GPU: %f milisegundos.\n", elapsedTime);
+    fprintf (file, "Tiempo GPU: %f milisegundos.\n", elapsedTime);
     
     printf("------------------------\n");
     fprintf (file, "------------------------\n");

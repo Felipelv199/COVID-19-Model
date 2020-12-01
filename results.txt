@@ -8,47 +8,47 @@ Dia 1
     Numero de casos fatales por dia: 0
 ------------------------
 Dia 2
-    Numero de nuevos casos positivos por dia: 5
+    Numero de nuevos casos positivos por dia: 4
     Numero de casos recuperados por dia: 0
     Numero de casos fatales por dia: 0
 ------------------------
 Dia 3
-    Numero de nuevos casos positivos por dia: 11
+    Numero de nuevos casos positivos por dia: 8
     Numero de casos recuperados por dia: 0
     Numero de casos fatales por dia: 0
 ------------------------
 Dia 4
-    Numero de nuevos casos positivos por dia: 10
+    Numero de nuevos casos positivos por dia: 8
     Numero de casos recuperados por dia: 0
     Numero de casos fatales por dia: 0
 ------------------------
 Dia 5
-    Numero de nuevos casos positivos por dia: 9
+    Numero de nuevos casos positivos por dia: 13
     Numero de casos recuperados por dia: 0
     Numero de casos fatales por dia: 0
 ------------------------
 Dia 6
-    Numero de nuevos casos positivos por dia: 8
+    Numero de nuevos casos positivos por dia: 10
     Numero de casos recuperados por dia: 0
     Numero de casos fatales por dia: 1
 ------------------------
 Dia 7
-    Numero de nuevos casos positivos por dia: 9
+    Numero de nuevos casos positivos por dia: 7
     Numero de casos recuperados por dia: 0
     Numero de casos fatales por dia: 0
 ------------------------
 Dia 8
-    Numero de nuevos casos positivos por dia: 13
+    Numero de nuevos casos positivos por dia: 12
     Numero de casos recuperados por dia: 0
-    Numero de casos fatales por dia: 1
+    Numero de casos fatales por dia: 0
 ------------------------
 Dia 9
-    Numero de nuevos casos positivos por dia: 3
+    Numero de nuevos casos positivos por dia: 2
     Numero de casos recuperados por dia: 0
     Numero de casos fatales por dia: 0
 ------------------------
 Dia 10
-    Numero de nuevos casos positivos por dia: 3
+    Numero de nuevos casos positivos por dia: 4
     Numero de casos recuperados por dia: 0
     Numero de casos fatales por dia: 4
 ------------------------
@@ -58,79 +58,79 @@ Dia 11
     Numero de casos fatales por dia: 1
 ------------------------
 Dia 12
-    Numero de nuevos casos positivos por dia: 4
+    Numero de nuevos casos positivos por dia: 5
     Numero de casos recuperados por dia: 0
-    Numero de casos fatales por dia: 0
+    Numero de casos fatales por dia: 1
 ------------------------
 Dia 13
-    Numero de nuevos casos positivos por dia: 1
-    Numero de casos recuperados por dia: 0
-    Numero de casos fatales por dia: 4
-------------------------
-Dia 14
-    Numero de nuevos casos positivos por dia: 4
-    Numero de casos recuperados por dia: 0
-    Numero de casos fatales por dia: 2
-------------------------
-Dia 15
     Numero de nuevos casos positivos por dia: 5
     Numero de casos recuperados por dia: 0
     Numero de casos fatales por dia: 3
 ------------------------
+Dia 14
+    Numero de nuevos casos positivos por dia: 3
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 3
+------------------------
+Dia 15
+    Numero de nuevos casos positivos por dia: 3
+    Numero de casos recuperados por dia: 0
+    Numero de casos fatales por dia: 3
+------------------------
 Dia 16
-    Numero de nuevos casos positivos por dia: 0
+    Numero de nuevos casos positivos por dia: 1
     Numero de casos recuperados por dia: 0
     Numero de casos fatales por dia: 2
 ------------------------
 Dia 17
     Numero de nuevos casos positivos por dia: 1
     Numero de casos recuperados por dia: 0
-    Numero de casos fatales por dia: 2
+    Numero de casos fatales por dia: 3
 ------------------------
 Dia 18
     Numero de nuevos casos positivos por dia: 1
     Numero de casos recuperados por dia: 0
-    Numero de casos fatales por dia: 2
+    Numero de casos fatales por dia: 3
 ------------------------
 Dia 19
-    Numero de nuevos casos positivos por dia: 1
+    Numero de nuevos casos positivos por dia: 0
     Numero de casos recuperados por dia: 1
-    Numero de casos fatales por dia: 0
+    Numero de casos fatales por dia: 1
 ------------------------
 Dia 20
+    Numero de nuevos casos positivos por dia: 0
+    Numero de casos recuperados por dia: 2
+    Numero de casos fatales por dia: 1
+------------------------
+Dia 21
     Numero de nuevos casos positivos por dia: 0
     Numero de casos recuperados por dia: 3
     Numero de casos fatales por dia: 1
 ------------------------
-Dia 21
-    Numero de nuevos casos positivos por dia: 1
-    Numero de casos recuperados por dia: 7
-    Numero de casos fatales por dia: 2
-------------------------
 Dia 22
-    Numero de nuevos casos positivos por dia: 1
-    Numero de casos recuperados por dia: 7
-    Numero de casos fatales por dia: 3
+    Numero de nuevos casos positivos por dia: 0
+    Numero de casos recuperados por dia: 5
+    Numero de casos fatales por dia: 2
 ------------------------
 Dia 23
     Numero de nuevos casos positivos por dia: 0
-    Numero de casos recuperados por dia: 3
+    Numero de casos recuperados por dia: 10
     Numero de casos fatales por dia: 2
 ------------------------
 Dia 24
     Numero de nuevos casos positivos por dia: 0
-    Numero de casos recuperados por dia: 6
-    Numero de casos fatales por dia: 3
+    Numero de casos recuperados por dia: 8
+    Numero de casos fatales por dia: 2
 ------------------------
 Dia 25
     Numero de nuevos casos positivos por dia: 0
-    Numero de casos recuperados por dia: 7
-    Numero de casos fatales por dia: 0
+    Numero de casos recuperados por dia: 4
+    Numero de casos fatales por dia: 1
 ------------------------
 Dia 26
     Numero de nuevos casos positivos por dia: 0
-    Numero de casos recuperados por dia: 8
-    Numero de casos fatales por dia: 1
+    Numero de casos recuperados por dia: 6
+    Numero de casos fatales por dia: 0
 ------------------------
 Dia 27
     Numero de nuevos casos positivos por dia: 0
@@ -139,37 +139,37 @@ Dia 27
 ------------------------
 Dia 28
     Numero de nuevos casos positivos por dia: 0
-    Numero de casos recuperados por dia: 2
+    Numero de casos recuperados por dia: 4
     Numero de casos fatales por dia: 0
 ------------------------
 Dia 29
     Numero de nuevos casos positivos por dia: 0
-    Numero de casos recuperados por dia: 3
-    Numero de casos fatales por dia: 1
+    Numero de casos recuperados por dia: 2
+    Numero de casos fatales por dia: 0
 ------------------------
 Dia 30
     Numero de nuevos casos positivos por dia: 0
-    Numero de casos recuperados por dia: 3
-    Numero de casos fatales por dia: 1
+    Numero de casos recuperados por dia: 4
+    Numero de casos fatales por dia: 0
 ------------------------
 Dia 31
     Numero de nuevos casos positivos por dia: 0
-    Numero de casos recuperados por dia: 0
-    Numero de casos fatales por dia: 1
+    Numero de casos recuperados por dia: 3
+    Numero de casos fatales por dia: 0
 ------------------------
 Resultados Finales de 31 Dias
     Numero agentes: 100
-    Numero de casos acumulados de agentes contagiados: 96
-    Numero de casos acumulados de agentes recuperados: 52
-    Numero de casos fatales acumulados: 37
+    Numero de casos acumulados de agentes contagiados: 93
+    Numero de casos acumulados de agentes recuperados: 54
+    Numero de casos fatales acumulados: 34
     Dia en que se contagio el primer agente: 1
-    Dia en que se contagio el 50% de los agentes contagiados: 7
-    Dia en que se contagio el 100% de los agentes contagiados: 22
+    Dia en que se contagio el 50% de los agentes contagiados: 6
+    Dia en que se contagio el 100% de los agentes contagiados: 18
     Dia en que se recupero el primer agente: 19
     Dia en que se recupero el 50% de los agentes recuperados: 24
-    Dia en que se recupero el 100% de los agentes recuperados: 30
+    Dia en que se recupero el 100% de los agentes recuperados: 31
     Dia en que ocurrio el primer caso fatal: 6
     Dia en que ocurrio el 50% de los casos fatales: 16
-    Dia en que ocurrio el 100% de los casos fatales: 31
-Time GPU: 12.862537 miliseconds.
+    Dia en que ocurrio el 100% de los casos fatales: 25
+Tiempo GPU: 12.763330 milisegundos.
 ------------------------
