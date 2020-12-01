@@ -5,7 +5,7 @@
 #include "curand_kernel.h"
 #include "structures.h"
 
-#define THREADS_N 1024
+#define THREADS_N 100
 #define BLOCKS_N 1
 
 using namespace std;

@@ -18,13 +18,13 @@ void printAgent(Agent ai)
 
 void inicializacion(Simulacion *S, Agent *A)
 {
-    int y = 0;
-    int x = 0;
+    float y = 0;
+    float x = 0;
 
     for (int i = 0; i < S->N; i++)
     {
-        y = rand() % (int)S->PQ;
-        x = rand() % (int)S->PQ;
+        y = rand() % (int)S->PQ + 1 / S->PQ;
+        x = rand() % (int)S->PQ + 1 / S->PQ;
         Agent newAgent;
         newAgent.X = x;
         newAgent.Y = y;
@@ -38,44 +38,42 @@ void inicializacion(Simulacion *S, Agent *A)
     }
 }
 
-double distance(int x0, int y0, int x1, int y1)
+double distance(float x, float y)
 {
-    int x = x1 - x0;
-    int y = y1 - y0;
     return sqrt((x * x) + (y * y));
 }
 
-void contagio(int n, int r, int x, int y, int i, float Pcon, Results *R, Agent *A, Agent *ai, int day)
+void contagio(int n, float r, float x, float y, int i, float Pcon, Results *R, Agent *A, Agent *ai, int day)
 {
-    int beta = 0;
-    int sigma = 0;
+    int sd = ai->S;
 
-    if (ai->S != 0)
+    if (sd != 0)
     {
         return;
     }
+
+    int beta = 0;
+    int sigma = 0;
 
     for (int j = 0; j < n; j++)
     {
         if (j != i)
         {
             Agent aj = A[j];
-            if (aj.S != 2)
+            if (aj.S == 1)
             {
-                if (aj.S > 0)
-                {
-                    beta = 1;
-                }
-                else
-                {
-                    beta = 0;
-                }
-
-                double d = distance(x, y, aj.X, aj.Y);
-                if (d <= r)
-                {
-                    sigma += d * beta;
-                }
+                beta = 1;
+            }
+            else
+            {
+                beta = 0;
+            }
+            float x = aj.X - x;
+            float y = aj.Y - y;
+            double d = distance(x, y);
+            if (d <= r)
+            {
+                sigma += beta;
             }
         }
         //printf("beta: %d\n", beta);
@@ -88,12 +86,12 @@ void contagio(int n, int r, int x, int y, int i, float Pcon, Results *R, Agent *
         alfa = 1;
     }
 
-    float random = (rand() % 101) / 100.0;
+    float random = (rand() % 1001) / 1000.0;
 
     if (random <= Pcon)
     {
 
-        ai->S = random * alfa;
+        ai->S = alfa;
         //printf("entro, %f %d %d\n", (rand() % 101) / 100.0, alfa, ai->S);
         if (ai->S == 1)
         {
@@ -116,25 +114,26 @@ void movilidad(Simulacion *S, Agent *ai)
         delta = 1;
     }
 
-    int X = 0;
-    int Y = 0;
-    int p = S->PQ;
-    int q = S->PQ;
-    int xd = ai->X;
-    int yd = ai->Y;
+    float X = 0;
+    float Y = 0;
+    float p = S->PQ;
+    float q = S->PQ;
+    float xd = ai->X;
+    float yd = ai->Y;
 
-    X = ((xd + (((2 * ((rand() % 101) / 100.0)) - 100) * S->lmax)) * delta) + (p * ((rand() % 101) / 100.0) * (1 - delta));
-    Y = ((yd + (((2 * ((rand() % 101) / 100.0)) - 100) * S->lmax)) * delta) + (q * ((rand() % 101) / 100.0) * (1 - delta));
+    X = ((xd + (((2 * (rand() % 1001 / 1000.0)) - 1) * S->lmax)) * delta) + (p * ((rand() % 1001) / 1000.0) * (1 - delta));
+    Y = ((yd + (((2 * (rand() % 1001 / 1000.0)) - 1) * S->lmax)) * delta) + (q * ((rand() % 1001) / 1000.0) * (1 - delta));
 
     int gamma = 0;
+    float random = rand() % 1001 / 1000.0;
 
-    if (((rand() % 101) / 100.0) <= ai->Pmov)
+    if (random <= ai->Pmov)
     {
         gamma = 1;
     }
 
-    int yd1 = Y;
-    int xd1 = X;
+    float yd1 = Y;
+    float xd1 = X;
 
     if (yd1 > S->PQ)
         yd1 = S->PQ - 1;
@@ -169,38 +168,39 @@ void contagioExterno(Agent *ai, Results *R, int n, int day)
     {
         return;
     }
-    int epsilon = 1;
-
-    if (sd != 0)
+    if (sd == 0)
     {
-        epsilon = 0;
+        int sd1 = sd;
+        float pext = ai->Pext;
+
+        if ((rand() % 1001 / 1000.0) <= pext)
+        {
+            sd1 = 1;
+        }
+
+        ai->S = sd1;
+
+        if (ai->S == 1)
+        {
+            R->cAcum++;
+            R->cXDia++;
+        }
     }
-
-    int sd1 = sd;
-    int pext = ai->Pext;
-
-    if ((((rand() % 101) / 100.0) <= pext) * epsilon > 0)
-    {
-        sd1 = 1;
-        R->cAcum++;
-        R->cXDia++;
-    }
-
-    ai->S = sd1;
 }
 
 void tiempoIncSinCurRec(Agent *ai, Results *R, int n, int day)
 {
     int Sd = ai->S;
     int Trecd = ai->Trec;
-    int Trecd1 = Trecd;
 
     if (Sd == 2 || Sd == -2)
     {
         return;
     }
 
-    if (Sd < 0)
+    int Trecd1 = Trecd;
+
+    if (Sd == -1)
     {
         Trecd1 -= 1;
         if (Trecd1 == 0)
@@ -208,47 +208,26 @@ void tiempoIncSinCurRec(Agent *ai, Results *R, int n, int day)
             ai->S = 2;
             R->cAcumAgRecup++;
             R->cRecupXDia++;
-
-            if (R->cAcumAgRecup == 1)
-            {
-                R->recupPrim = day;
-            }
-            else if (n / 2 == R->cAcumAgRecup)
-            {
-                R->recup50per = day;
-            }
-            else if (n == R->cAcumAgRecup)
-            {
-                R->recup100per = day;
-            }
-
-            return;
         }
     }
-
-    int Tincd = ai->Tinc;
-    int Sd1 = -1;
-
-    if (Tincd > 0)
+    else if (Sd == 1)
     {
-        Sd1 = Sd;
+        int Tincd = ai->Tinc;
+        Tincd -= 1;
+        int Sd1 = -1;
+
+        if (Tincd > 0)
+        {
+            Sd1 = Sd;
+        }
+
+        ai->S = Sd1;
+        ai->Tinc = Tincd;
     }
-
-    int Tincd1 = Tincd;
-
-    if (Sd > 0)
-    {
-        Tincd1 -= 1;
-    }
-
-    ai->Trec = Trecd1;
-    ai->S = Sd1;
-    ai->Tinc = Tincd1;
 }
 
 void casosFatales(Agent *ai, Results *R, int n, int day)
 {
-    int rho = 0;
     int sd = ai->S;
 
     if (sd == 2 || sd == -2)
@@ -256,34 +235,23 @@ void casosFatales(Agent *ai, Results *R, int n, int day)
         return;
     }
 
+    int rho = 0;
+
     if (sd < 0)
     {
         rho = 1;
     }
 
     int sd1 = sd;
-    float random = (rand() % 101) / 100.0;
+    float random = (rand() % 1001) / 1000.0;
 
     if (random <= ai->Pfat)
     {
-        if (random * rho > 0)
+        if (rho > 0)
         {
             sd1 = -2;
             R->cFatAcum++;
             R->cFatXDia++;
-
-            if (R->cFatAcum == 1)
-            {
-                R->cFatPrim = day;
-            }
-            else if (n / 2 == R->cFatAcum)
-            {
-                R->cFat50per = day;
-            }
-            else if (n == R->cFatAcum)
-            {
-                R->cFat100per = day;
-            }
         }
     }
 
@@ -293,7 +261,7 @@ void casosFatales(Agent *ai, Results *R, int n, int day)
 int main()
 {
     const int N = 100;
-    const int DAYS = 32;
+    const int DAYS = 31;
     Simulacion sim;
     sim.N = N;
     sim.dmax = DAYS;
@@ -331,6 +299,11 @@ int main()
         newDay.cRecup = results.cRecupXDia;
         resultsDays[i] = newDay;
 
+        printf("Dia %d\n", i);
+        printf("    Numero de nuevos casos positivos por dia: %d\n", results.cXDia);
+        printf("    Numero de casos recuperados por dia: %d\n", results.cFatXDia);
+        printf("    Numero de casos fatales por dia: %d\n", results.cRecupXDia);
+        printf("------------------------------------------------------\n");
         results.cXDia = 0;
         results.cFatXDia = 0;
         results.cRecupXDia = 0;
@@ -385,12 +358,6 @@ int main()
         {
             results.cFat100per = i;
         }
-
-        printf("Dia %d\n", i);
-        printf("    Numero de nuevos casos positivos por dia: %d\n", resultsDay.c);
-        printf("    Numero de casos recuperados por dia: %d\n", resultsDay.cRecup);
-        printf("    Numero de casos fatales por dia: %d\n", resultsDay.cFat);
-        printf("------------------------------------------------------\n");
     }
 
     printf("Resultados Finales\n");
