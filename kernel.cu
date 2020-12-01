@@ -308,7 +308,7 @@ __host__ void printAgent(Agent ai)
     printf("X: %f, Y: %f, S: %d, Pcon: %f, Pext: %f, Pfat: %f, Pmov: %f, Psmo: %f, Tinc: %d, Trec: %d\n", ai.X, ai.Y, ai.S, ai.Pcon, ai.Pext, ai.Pfat, ai.Pmov, ai.Psmo, ai.Tinc, ai.Trec);
 }
 
-__host__ void inicializacion(int n, int pq, Agent *host_agents){
+__host__ void inicializacion(int n, int pq, Agent *host_agents, cudaEvent_t s, cudaEvent_t e, float *et){
     Agent* dev_agents;
     curandState* dev_states;
 
@@ -319,13 +319,29 @@ __host__ void inicializacion(int n, int pq, Agent *host_agents){
 
     dim3 block(THREADS_N);
     dim3 grid(BLOCKS_N);
-
+    
+    cudaEventRecord(s, 0);
     setup_kernel<<<grid,block>>>(dev_states, time(NULL));
+	cudaEventRecord(e, 0);
     check_CUDA_error("Error en kernel setup_kernel");
     cudaDeviceSynchronize();
+    float currElapsedTime;    
+    cudaEventElapsedTime(&currElapsedTime, s, e);
+    *et+=currElapsedTime;
+	cudaEventDestroy(s);
+	cudaEventDestroy(e);
+    
+	cudaEventCreate(&s);
+    cudaEventCreate(&e);
+    cudaEventRecord(s, 0);
     inicializacion_GPU<<<grid, block>>>(dev_agents, dev_states, pq);
+	cudaEventRecord(e, 0);
     check_CUDA_error("Error en kernel dev_agents");
     cudaDeviceSynchronize();
+    cudaEventElapsedTime(&currElapsedTime, s, e);
+    *et+=currElapsedTime;
+	cudaEventDestroy(s);
+	cudaEventDestroy(e);
 
     cudaMemcpy(host_agents, dev_agents, n*sizeof(Agent), cudaMemcpyDeviceToHost);
     check_CUDA_error("Error en cudaMemcpy dev_agents-->host_agents");
@@ -590,12 +606,18 @@ int main(){
     simulacion.N = N;
     simulacion.dmax = DAYS;
     int mM = simulacion.Mmax;
-    Agent* agents;
+    Agent* agents;    
+	cudaEvent_t start;
+    cudaEvent_t end;
+    float elapsedTime=0;
 
     agents = (Agent*)malloc(N*sizeof(Agent));
+	cudaEventCreate(&start);
+    cudaEventCreate(&end);
 
-    inicializacion(N, simulacion.PQ, agents);
-
+    inicializacion(N, simulacion.PQ, agents, start, end, &elapsedTime);
+    printf("Time GPU: %f miliseconds.\n", elapsedTime);
+    
     ResultsDays *results;
     results = (ResultsDays*)malloc(DAYS*sizeof(ResultsDays));
 
