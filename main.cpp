@@ -2,7 +2,7 @@
 #include <time.h>
 #include <math.h>
 #include <stdlib.h>
-#include "kernel.h"
+#include "structures.h"
 
 using namespace std;
 
@@ -23,8 +23,8 @@ void inicializacion(Simulacion *S, Agent *A)
 
     for (int i = 0; i < S->N; i++)
     {
-        y = rand() % S->PQ;
-        x = rand() % S->PQ;
+        y = rand() % (int)S->PQ;
+        x = rand() % (int)S->PQ;
         Agent newAgent;
         newAgent.X = x;
         newAgent.Y = y;
@@ -292,8 +292,8 @@ void casosFatales(Agent *ai, Results *R, int n, int day)
 
 int main()
 {
-    const int N = 1024;
-    const int DAYS = 30;
+    const int N = 100;
+    const int DAYS = 32;
     Simulacion sim;
     sim.N = N;
     sim.dmax = DAYS;
