@@ -260,7 +260,7 @@ void casosFatales(Agent *ai, Results *R, int n, int day)
 
 int main()
 {
-    const int N = 100;
+    const int N = 1000;
     const int DAYS = 31;
     Simulacion sim;
     sim.N = N;
@@ -268,11 +268,16 @@ int main()
     Agent agents[N];
     ResultsDays resultsDays[DAYS];
     Results results;
-    inicializacion(&sim, agents);
 
+    float elapsedTime = 0;
+    clock_t start = clock();
+    inicializacion(&sim, agents);
+    clock_t end = clock();
+    elapsedTime += end - start;
     int dM = sim.dmax;
     int mM = sim.Mmax;
     srand(time(NULL));
+
     for (int i = 1; i <= dM; i++)
     {
         for (int j = 0; j < mM; j++)
@@ -280,17 +285,23 @@ int main()
             for (int k = 0; k < N; k++)
             {
                 Agent agent = agents[k];
+                start = clock();
                 contagio(sim.N, sim.R, agent.X, agent.Y, k, agent.Pcon, &results, agents, &agent, i);
                 movilidad(&sim, &agent);
+                end = clock();
+                elapsedTime += end - start;
                 agents[k] = agent;
             }
         }
         for (int j = 0; j < N; j++)
         {
             Agent agent = agents[j];
+            start = clock();
             contagioExterno(&agent, &results, N, i);
             tiempoIncSinCurRec(&agent, &results, N, i);
             casosFatales(&agent, &results, N, i);
+            end = clock();
+            elapsedTime += end - start;
             agents[j] = agent;
         }
         ResultsDays newDay;
@@ -373,5 +384,6 @@ int main()
     printf("    Dia en que ocurrio el primer caso fatal: %d\n", results.cFatPrim);
     printf("    Dia en que ocurrio el 50%% de los casos fatales: %d\n", results.cFat50per);
     printf("    Dia en que ocurrio el 100%% de los casos fatales: %d\n", results.cFat100per);
+    printf("Tiempo transcurrido: %f segundos\n", elapsedTime / 1000.0);
     return 0;
 }
