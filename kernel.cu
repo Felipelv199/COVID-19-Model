@@ -355,7 +355,7 @@ __host__ float rangeRandom()
     return (rand() % 1001 / 1000.0) ;
 }
 
-__host__ ResultsDays newDay(int movements, Agent *host_agents, Simulacion *host_simulacion)
+__host__ ResultsDays newDay(int movements, Agent *host_agents, Simulacion *host_simulacion, cudaEvent_t s, cudaEvent_t e, float *et)
 {
 
     ResultsDays results;
@@ -477,14 +477,31 @@ __host__ ResultsDays newDay(int movements, Agent *host_agents, Simulacion *host_
         check_CUDA_error("Error en cudaMalloc randomContagios-->devrandContagios");
         cudaMemcpy(devRandMov6, randomMov6, n*sizeof(float), cudaMemcpyHostToDevice);
         check_CUDA_error("Error en cudaMalloc randomContagios-->devrandContagios");
-
+        
+        cudaEventCreate(&s);
+        cudaEventCreate(&e);
+        cudaEventRecord(s, 0);
         contagio_GPU<<<grid, block>>>(dev_agents, r, n, devcXDia, devrandContagios);
+	    cudaEventRecord(e, 0);
         check_CUDA_error("Error en kernel contagio_GPU");
         cudaDeviceSynchronize();
+        float currElapsedTime;  
+        cudaEventElapsedTime(&currElapsedTime, s, e);
+        *et+=currElapsedTime;
+        cudaEventDestroy(s);
+        cudaEventDestroy(e);
 
+        cudaEventCreate(&s);
+        cudaEventCreate(&e);
+        cudaEventRecord(s, 0);
         movilidad_GPU<<<grid, block>>>(dev_agents, PQ, lmax, devRandMov1, devRandMov2, devRandMov3, devRandMov4, devRandMov5, devRandMov6);
+	    cudaEventRecord(e, 0);
         check_CUDA_error("Error en kernel movilidad_GPU");
-        cudaDeviceSynchronize();
+        cudaDeviceSynchronize();  
+        cudaEventElapsedTime(&currElapsedTime, s, e);
+        *et+=currElapsedTime;
+        cudaEventDestroy(s);
+        cudaEventDestroy(e);
 
         cudaMemcpy(cXdia, devcXDia, n*sizeof(int), cudaMemcpyDeviceToHost);
         check_CUDA_error("Error en cudaMalloc devcXDia-->cXDia");
@@ -518,22 +535,47 @@ __host__ ResultsDays newDay(int movements, Agent *host_agents, Simulacion *host_
     cudaMemcpy(devrandFat, randomFat, n*sizeof(float), cudaMemcpyHostToDevice);
     check_CUDA_error("Error en cudaMalloc randomContagios-->devrandContagios");
 
+    cudaEventCreate(&s);
+    cudaEventCreate(&e);
+    cudaEventRecord(s, 0);
     contagioExterno_GPU<<<grid,block>>>(dev_agents, devcXDia, devrandContagiosExt);
+    cudaEventRecord(e, 0);
     check_CUDA_error("Error en kernel contagioExterno_GPU");
     cudaDeviceSynchronize();
+    float currElapsedTime; 
+    cudaEventElapsedTime(&currElapsedTime, s, e);
+    *et+=currElapsedTime;
+    cudaEventDestroy(s);
+    cudaEventDestroy(e);
     cudaMemcpy(cXdia, devcXDia, n*sizeof(int), cudaMemcpyDeviceToHost);
     check_CUDA_error("Error en cudaMalloc devcXDia-->cXDia");
 
     cudaMemcpy(host_agents, dev_agents, n*sizeof(Agent), cudaMemcpyDeviceToHost);
     check_CUDA_error("Error en cudaMalloc devAgents-->host_agents");
-    
-    tiempoIncSinCurRec_GPU<<<grid,block>>>(dev_agents, devrecupXDia);
-    check_CUDA_error("Error en kernel tiempoIncSinCurRec_GPU");
-    cudaDeviceSynchronize();
 
+    cudaEventCreate(&s);
+    cudaEventCreate(&e);
+    cudaEventRecord(s, 0);
+    tiempoIncSinCurRec_GPU<<<grid,block>>>(dev_agents, devrecupXDia);
+    cudaEventRecord(e, 0);
+    check_CUDA_error("Error en kernel tiempoIncSinCurRec_GPU");
+    cudaDeviceSynchronize(); 
+    cudaEventElapsedTime(&currElapsedTime, s, e);
+    *et+=currElapsedTime;
+    cudaEventDestroy(s);
+    cudaEventDestroy(e);
+
+    cudaEventCreate(&s);
+    cudaEventCreate(&e);
+    cudaEventRecord(s, 0);
     casosFatales_GPU<<<grid,block>>>(dev_agents, devfatXDia, devrandFat);
+    cudaEventRecord(e, 0);
     check_CUDA_error("Error en kernel casosFatales_GPU");
     cudaDeviceSynchronize();
+    cudaEventElapsedTime(&currElapsedTime, s, e);
+    *et+=currElapsedTime;
+    cudaEventDestroy(s);
+    cudaEventDestroy(e);
 
     cudaMemcpy(cXdia, devcXDia, n*sizeof(int), cudaMemcpyDeviceToHost);
     check_CUDA_error("Error en cudaMalloc devcXDia-->cXDia");
@@ -616,7 +658,6 @@ int main(){
     cudaEventCreate(&end);
 
     inicializacion(N, simulacion.PQ, agents, start, end, &elapsedTime);
-    printf("Time GPU: %f miliseconds.\n", elapsedTime);
     
     ResultsDays *results;
     results = (ResultsDays*)malloc(DAYS*sizeof(ResultsDays));
@@ -625,7 +666,7 @@ int main(){
     {
         
 
-        results[i-1] = newDay(mM, agents, &simulacion);
+        results[i-1] = newDay(mM, agents, &simulacion, start, end, &elapsedTime);
         
         simulacion.results.cAcum += results[i-1].c;
         simulacion.results.cAcumAgRecup += results[i-1].cRecup;
@@ -663,7 +704,7 @@ int main(){
         printf("------------------------\n");
         fprintf (file, "------------------------\n");
         
-    } 
+    }
 
     printf("Resultados Finales de %d Dias\n", DAYS);
     fprintf (file, "Resultados Finales de %d Dias\n", DAYS);
@@ -823,6 +864,8 @@ int main(){
         printf("    Dia en que ocurrio el 100%% de los casos fatales: %d\n", simulacion.results.cFat100per);
         fprintf (file,"    Dia en que ocurrio el 100%% de los casos fatales: %d\n", simulacion.results.cFat100per );
     }
+    printf("Time GPU: %f miliseconds.\n", elapsedTime);
+    fprintf (file, "Time GPU: %f miliseconds.\n", elapsedTime);
     
     printf("------------------------\n");
     fprintf (file, "------------------------\n");
